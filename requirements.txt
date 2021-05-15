@@ -1,0 +1,2 @@
+-r face_detection_and_extraction/requirements.txt
+-r face_feat_extraction_and_filtering/requirements.txt

@@ -5,25 +5,6 @@ import os
 from modules.common_utils import get_argparse
 
 
-def main():
-    parser = get_argparse(description="OpenCV DNN face detection")
-    args = parser.parse_args()
-
-    net = load_net(args.model, args.prototxt)
-    # choose inference mode
-    if args.webcam and args.image is None and args.video is None:
-        inference_webcam(net, args.threshold)
-    elif args.image and args.video is None and args.webcam is False:
-        inference_img(net, args.image, args.threshold)
-    elif args.video and args.image is None and args.webcam is False:
-        inference_vid(net, args.video, args.threshold)
-    else:
-        print("Only one mode is allowed")
-        print("\tpython detect_face_opencv_dnn -w           # webcam mode")
-        print("\tpython detect_face_opencv_dnn -i img_path  # image mode")
-        print("\tpython detect_face_opencv_dnn -v vid_path  # video mode")
-
-
 def load_net(model, prototxt):
     # load face detection model
     fname, fext = os.path.splitext(model)
@@ -51,6 +32,8 @@ def inference_img(net, img, threshold, waitKey_val=0):
     if isinstance(img, str):
         if os.path.exists(img):
             image = cv2.imread(img)
+        else:
+            raise FileNotFoundError(f"{img} does not exist")
     elif isinstance(img, np.ndarray):
         image = img
     else:
@@ -150,6 +133,25 @@ def batch_inference_img(net, cv2_img_nparray):
             cv2.imshow("output", image[img_idx])
             cv2.waitKey(0)
             img_idx += 1
+
+
+def main():
+    parser = get_argparse(description="OpenCV DNN face detection")
+    args = parser.parse_args()
+
+    net = load_net(args.model, args.prototxt)
+    # choose inference mode
+    if args.webcam and args.image is None and args.video is None:
+        inference_webcam(net, args.threshold)
+    elif args.image and args.video is None and args.webcam is False:
+        inference_img(net, args.image, args.threshold)
+    elif args.video and args.image is None and args.webcam is False:
+        inference_vid(net, args.video, args.threshold)
+    else:
+        print("Only one mode is allowed")
+        print("\tpython detect_face_opencv_dnn -w           # webcam mode")
+        print("\tpython detect_face_opencv_dnn -i img_path  # image mode")
+        print("\tpython detect_face_opencv_dnn -v vid_path  # video mode")
 
 
 if __name__ == "__main__":

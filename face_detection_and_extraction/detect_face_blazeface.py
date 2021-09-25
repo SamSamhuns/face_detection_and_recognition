@@ -77,6 +77,8 @@ def inference_img(net, runtime, back_model, img, threshold, waitKey_val=0):
     if isinstance(img, str):
         if os.path.exists(img):
             image = cv2.imread(img)
+        else:
+            raise FileNotFoundError(f"{img} does not exist")
     elif isinstance(img, np.ndarray):
         image = img
     else:

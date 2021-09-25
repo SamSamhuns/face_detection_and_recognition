@@ -1,16 +1,15 @@
 #  splits a directory with object classes in different subdirectories into
 #  train, test and optionally val sub-directory with the same class sub-dir
 #  structure
-
 import os
 import cv2
 import glob
 import logging
-import argparse
 import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
+from modules.utils import get_argparse, _fix_path_for_globbing
 
 today = datetime.today()
 year, month, day, hour, minute, sec = today.year, today.month, today.day, today.hour, today.minute, today.second
@@ -19,7 +18,7 @@ os.makedirs("logs", exist_ok=True)
 logging.basicConfig(filename=f'logs/extraction_statistics_{year}_{month}_{day}_{hour}_{minute}_{sec}.log',
                     level=logging.INFO)
 
-##################### Raw Data Organization #########################
+# #################### Raw Data Organization #########################
 #   raw_data
 #          |_ dataset
 #                   |_ class_1
@@ -31,55 +30,26 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}_{month}_{day}_{
 #                             |_ img2
 #                             |_ ....
 #                   ...
-####################################################################
+# ###################################################################
 
-##################### Data Configurations here #####################
+# #################### Data Configurations here #####################
 # example raw data path = "data/raw_data/birds_dataset"
 # example target data path = "data/processed_birds_dataset"
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm'}
-####################################################################
-
-
-def _fix_path_for_globbing(dir):
-    """ Add * at the end of paths for proper globbing
-    """
-    if dir[-1] == '/':         # data/
-        dir += '*'
-    elif dir[-1] != '*':       # data
-        dir += '/*'
-    else:                      # data/*
-        dir = dir
-
-    return dir
+# ###################################################################
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-rd',
-                        '--raw_data_path',
-                        type=str,
-                        required=True,
+    parser = get_argparse(description="Dataset face extraction")
+    parser.remove_arguments(["image", "video", "webcam"])
+    parser.add_argument('-rd', '--raw_data_path',
+                        type=str, required=True,
                         help="""Raw dataset path with
-                        class imgs inside folders""")
-    parser.add_argument('-td',
-                        '--target_data_path',
-                        type=str,
-                        required=True,
+                        class imgs inside folders. (default: %(default)s)""")
+    parser.add_argument('-td', '--target_data_path',
+                        type=str, required=True,
                         help="""Target dataset path where
-                        imgs will be sep into train & test""")
-    parser.add_argument('-m',
-                        '--model',
-                        default="./dnn_caffe/res10_300x300_ssd_iter_140000.caffemodel",
-                        help='minimum probability to filter weak detections')
-    parser.add_argument('-p',
-                        '--prototxt',
-                        default="./dnn_caffe/deploy.prototxt.txt",
-                        help="path to 'deploy' prototxt file")
-    parser.add_argument('-t',
-                        '--threshold',
-                        type=float,
-                        default=0.5,
-                        help='minimum probability to filter weak detections')
+                        imgs will be sep into train & test. (default: %(default)s)""")
     args = parser.parse_args()
 
     filter_faces_from_data(args.raw_data_path,

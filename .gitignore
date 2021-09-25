@@ -112,9 +112,6 @@ venv.bak/
 *.log.json
 work_dirs/
 
-# Pytorch weights are required so do not ignore
-*.pth
-
 # python virtual env
 venv
 

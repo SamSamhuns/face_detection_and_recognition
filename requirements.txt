@@ -1,2 +1,6 @@
--r face_detection_and_extraction/requirements.txt
+-r face_detection_and_extraction/common.txt
+-r face_detection_and_extraction/mtcnn.txt
+-r face_detection_and_extraction/blazeface.txt
+-r face_detection_and_extraction/opencv.txt
+-r face_detection_and_extraction/yolov5-face.txt
 -r face_feat_extraction_and_filtering/requirements.txt

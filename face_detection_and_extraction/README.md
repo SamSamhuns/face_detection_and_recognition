@@ -2,22 +2,28 @@
 
 Face detection with mtcnn and cv2 dnn
 
-Set a virtualenv and `pip install -r requirements.txt`
-
 ## cv2 DNN face detection
 
 ```shell
-$ python dnn_face_detect.py -w                # webcam mode
-$ python dnn_face_detect.py -i <PATH_TO_IMG>  # image mode
-$ python dnn_face_detect.py -v <PATH_TO_VID>  # video mode
+$ python detect_face_opencv_dnn.py -w                # webcam mode
+$ python detect_face_opencv_dnn.py -i <PATH_TO_IMG>  # image mode
+$ python detect_face_opencv_dnn.py -v <PATH_TO_VID>  # video mode
 ```
 
 ## mtcnn face detection
 
 ```shell
-$ python mtcnn_face_detect.py -w               # webcam mode
-$ python mtcnn_face_detect.py -i <PATH_TO_IMG> # image mode
-$ python mtcnn_face_detect.py -v <PATH_TO_VID> # video mode
+$ python detect_face_opencv_mtcnn.py -w               # webcam mode
+$ python detect_face_opencv_mtcnn.py -i <PATH_TO_IMG> # image mode
+$ python detect_face_opencv_mtcnn.py -v <PATH_TO_VID> # video mode
+```
+
+## blazeface face detection
+
+```shell
+$ python detect_face_blazeface.py -w               # webcam mode
+$ python detect_face_blazeface.py -i <PATH_TO_IMG> # image mode
+$ python detect_face_blazeface.py -v <PATH_TO_VID> # video mode
 ```
 
 ## Face Extraction from dataset

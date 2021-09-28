@@ -106,6 +106,9 @@ venv.bak/
 # vscode
 .vscode
 
+# intellij
+.idea
+
 # custom
 *.pkl
 *.pkl.json
@@ -118,4 +121,8 @@ venv
 # mac os file
 .DS_Store
 ._.DS_Store
-.idea
+
+# weights folder
+weights/
+# except for download weights script
+!*/weights/download_weights.sh

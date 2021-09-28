@@ -5,7 +5,7 @@ import onnx
 import torch
 import torch.nn as nn
 
-import models
+import models as models
 from models.experimental import attempt_load
 from utils.activations import Hardswish, SiLU
 from utils.general import set_logging, check_img_size
@@ -14,7 +14,7 @@ from utils.general import set_logging, check_img_size
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str,
-                        default='weights/yolov5n/yolov5n-face.pt',
+                        default='../../../weights/yolov5n/yolov5n-face.pt',
                         help='pytorch weight path. (default: %(default)s)')
     parser.add_argument('--img_size', nargs='+', type=int,
                         default=[640, 640], help='image size (h, w) (default: %(default)s)')

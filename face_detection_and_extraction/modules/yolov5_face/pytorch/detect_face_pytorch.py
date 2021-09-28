@@ -1,3 +1,4 @@
+import time
 import copy
 import argparse
 
@@ -74,6 +75,7 @@ def detect_one(model, image_path, device):
     conf_thres = 0.3
     iou_thres = 0.5
 
+    start_time = time.time()
     orgimg = cv2.imread(image_path)  # BGR
     img0 = copy.deepcopy(orgimg)
     assert orgimg is not None, 'Image Not Found ' + image_path
@@ -97,8 +99,14 @@ def detect_one(model, image_path, device):
         img = img.unsqueeze(0)
 
     # Inference
+    start = time.time()
     pred_all = model(img)
+    end = time.time()
     pred = pred_all[0]
+
+    inf_time = end - start
+    print(f'Inference Time: {inf_time:.3f}s Single Image')
+    print(f'Estimated Inference FPS: {1. / (end - start):.2f} Single Image')
 
     # Apply NMS
     pred = non_max_suppression_face(pred, conf_thres, iou_thres)
@@ -128,6 +136,10 @@ def detect_one(model, image_path, device):
                              gn_lks).view(-1).tolist()
                 class_num = det[j, 15].cpu().numpy()
                 orgimg = show_results(orgimg, xywh, conf, landmarks, class_num)
+
+    elapse_time = time.time() - start_time
+    print(f'Total Elapsed Time: {elapse_time:.3f} Seconds'.format())
+    print(f'Final Estimated FPS: {1 / (elapse_time):.2f}')
 
     cv2.imshow('result', orgimg)
     cv2.waitKey(0)

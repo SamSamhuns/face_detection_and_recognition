@@ -1,4 +1,5 @@
 import time
+import math
 
 import cv2
 import torch
@@ -6,13 +7,34 @@ import torchvision
 import numpy as np
 
 
-def preprocess_image(cv2_image, in_size=(640, 640)) -> np.ndarray:
-    """preprocesses a cv2_image BGR
-    pil_image = pillow image
-    in_size: in_width, in_height
+def make_divisible(x, divisor):
     """
-    in_w, in_h = in_size
+    Returns x evenly divisible by divisor
+    """
+    return math.ceil(x / divisor) * divisor
+
+
+def check_img_size(img_size, s=32):
+    """
+    Verify img_size is a multiple of stride s
+    s = max stride, check with model.stride.max()
+    """
+    new_size = make_divisible(img_size, int(s))  # ceil gs-multiple
+    if new_size != img_size:
+        print('WARNING: --img-size %g must be multiple of max stride %g, updating to %g' %
+              (img_size, s, new_size))
+    return new_size
+
+
+def preprocess_image(cv2_image, input_size=(640, 640)):
+    """preprocesses a cv2_image BGR
+    args:
+        cv2_image = cv2 image
+        in_size: in_width, in_height
+    """
     cv2_image = cv2_image[..., ::-1]  # BGR2RGB
+    # make sure img dims are divisible by model stride
+    in_w, in_h = check_img_size(input_size[0]), check_img_size(input_size[1])
     pad_resized = pad_resize_image(cv2_image, (in_w, in_h))
     img = np.transpose(pad_resized, (2, 0, 1)).astype(np.float32)  # HWC -> CHW
     img /= 255.0
@@ -70,16 +92,14 @@ def conv_strides_to_anchors(pred, device="cpu"):
     return torch.cat(z, 1)
 
 
-def disp_output(detections, image_src, threshold, model_in_HW, line_thickness=None, text_bg_alpha=0.0):
-    if isinstance(image_src, str):
-        image_src = cv2.imread(image_src)
-
+def disp_output(detections, cv2_img, threshold, model_in_HW, line_thickness=None, text_bg_alpha=0.0):
+    # plot detections and disp image
     labels = detections[..., -1].numpy()
     boxs = detections[..., :4].numpy()
     confs = detections[..., 4].numpy()
 
     mh, mw = model_in_HW
-    h, w = image_src.shape[:2]
+    h, w = cv2_img.shape[:2]
     boxs[:, :] = scale_coords((mh, mw), boxs[:, :], (h, w)).round()
     tl = line_thickness or round(0.002 * (w + h) / 2) + 1
     for i, box in enumerate(boxs):
@@ -87,13 +107,14 @@ def disp_output(detections, image_src, threshold, model_in_HW, line_thickness=No
             x1, y1, x2, y2 = map(int, box)
             np.random.seed(int(labels[i]) + 2020)
             color = [np.random.randint(0, 255), 0, np.random.randint(0, 255)]
-            cv2.rectangle(image_src, (x1, y1), (x2, y2), color, thickness=max(
+            cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, thickness=max(
                 int((w + h) / 600), 1), lineType=cv2.LINE_AA)
             label = '%s %.2f' % (int(labels[i]), confs[i])
-            t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=1)[0]
+            t_size = cv2.getTextSize(
+                label, 0, fontScale=tl / 3, thickness=1)[0]
             c2 = x1 + t_size[0] + 3, y1 - t_size[1] - 5
             if text_bg_alpha == 0.0:
-                cv2.rectangle(image_src, (x1 - 1, y1), c2,
+                cv2.rectangle(cv2_img, (x1 - 1, y1), c2,
                               color, cv2.FILLED, cv2.LINE_AA)
             else:
                 # Transparent text background
@@ -101,17 +122,17 @@ def disp_output(detections, image_src, threshold, model_in_HW, line_thickness=No
                 BChannel, GChannel, RChannel = color
                 xMin, yMin = int(x1 - 1), int(y1 - t_size[1] - 3)
                 xMax, yMax = int(x1 + t_size[0]), int(y1)
-                image_src[yMin:yMax, xMin:xMax, 0] = image_src[yMin:yMax,
-                                                               xMin:xMax, 0] * alphaReserve + BChannel * (1 - alphaReserve)
-                image_src[yMin:yMax, xMin:xMax, 1] = image_src[yMin:yMax,
-                                                               xMin:xMax, 1] * alphaReserve + GChannel * (1 - alphaReserve)
-                image_src[yMin:yMax, xMin:xMax, 2] = image_src[yMin:yMax,
-                                                               xMin:xMax, 2] * alphaReserve + RChannel * (1 - alphaReserve)
-            cv2.putText(image_src, label, (x1 + 3, y1 - 4), 0, tl / 3, [255, 255, 255],
+                cv2_img[yMin:yMax, xMin:xMax, 0] = cv2_img[yMin:yMax,
+                                                           xMin:xMax, 0] * alphaReserve + BChannel * (1 - alphaReserve)
+                cv2_img[yMin:yMax, xMin:xMax, 1] = cv2_img[yMin:yMax,
+                                                           xMin:xMax, 1] * alphaReserve + GChannel * (1 - alphaReserve)
+                cv2_img[yMin:yMax, xMin:xMax, 2] = cv2_img[yMin:yMax,
+                                                           xMin:xMax, 2] * alphaReserve + RChannel * (1 - alphaReserve)
+            cv2.putText(cv2_img, label, (x1 + 3, y1 - 4), 0, tl / 3, [255, 255, 255],
                         thickness=1, lineType=cv2.LINE_AA)
             print("bbox:", box, "conf:", confs[i],
                   "class:", int(labels[i]))
-    cv2.imshow("result", image_src)
+    cv2.imshow("result", cv2_img)
     cv2.waitKey(0)
 
 
@@ -359,16 +380,16 @@ def pad_resize_image(cv2_img, new_size=(640, 480), color=(125, 125, 125)) -> np.
 
 def clip_coords(boxes, img_shape):
     # Clip bounding xyxy bounding boxes to image shape (height, width)
-    if isinstance(boxes, torch.Tensor):
-        boxes[:, 0].clamp_(0, img_shape[1])  # x1
-        boxes[:, 1].clamp_(0, img_shape[0])  # y1
-        boxes[:, 2].clamp_(0, img_shape[1])  # x2
-        boxes[:, 3].clamp_(0, img_shape[0])  # y2
-    else:  # np.array
+    if isinstance(boxes, np.ndarray):
         boxes[:, 0].clip(0, img_shape[1], out=boxes[:, 0])  # x1
         boxes[:, 1].clip(0, img_shape[0], out=boxes[:, 1])  # y1
         boxes[:, 2].clip(0, img_shape[1], out=boxes[:, 2])  # x2
         boxes[:, 3].clip(0, img_shape[0], out=boxes[:, 3])  # y2
+    else:  # torch.Tensor
+        boxes[:, 0].clamp_(0, img_shape[1])  # x1
+        boxes[:, 1].clamp_(0, img_shape[0])  # y1
+        boxes[:, 2].clamp_(0, img_shape[1])  # x2
+        boxes[:, 3].clamp_(0, img_shape[0])  # y2
 
 
 def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):

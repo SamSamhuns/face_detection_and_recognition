@@ -88,8 +88,6 @@ def inference_img(net, img, threshold, waitKey_val=0):
 
     frame_face, face_bboxes = inference_and_get_face_boxes(
         net.face_net, image, threshold)
-    if not face_bboxes:  # no faces detected
-        return
 
     padding = 20
     for bbox in face_bboxes:
@@ -159,9 +157,9 @@ def main():
         inference_vid(net, args.video, args.threshold)
     else:
         print("Only one mode is allowed")
-        print("\tpython detect_face_age_gender -w           # webcam mode")
-        print("\tpython detect_face_age_gender -i img_path  # image mode")
-        print("\tpython detect_face_age_gender -v vid_path  # video mode")
+        print("\tpython detect_face_age_gender.py -w           # webcam mode")
+        print("\tpython detect_face_age_gender.py -i img_path  # image mode")
+        print("\tpython detect_face_age_gender.py -v vid_path  # video mode")
 
 
 if __name__ == "__main__":

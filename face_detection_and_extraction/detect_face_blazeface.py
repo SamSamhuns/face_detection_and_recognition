@@ -141,9 +141,9 @@ def main():
         inference_vid(net, runtime, back_model, args.video, args.threshold)
     else:
         print("Only one mode is allowed")
-        print("\tpython dnn_detect_blazeface -w           # webcam mode")
-        print("\tpython dnn_detect_blazeface -i img_path  # image mode")
-        print("\tpython dnn_detect_blazeface -v vid_path  # video mode")
+        print("\tpython detect_face_blazeface.py -w           # webcam mode")
+        print("\tpython detect_face_blazeface.py -i img_path  # image mode")
+        print("\tpython detect_face_blazeface.py -v vid_path  # video mode")
 
 
 if __name__ == "__main__":

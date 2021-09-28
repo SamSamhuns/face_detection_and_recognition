@@ -149,9 +149,9 @@ def main():
         inference_vid(net, args.video, args.threshold)
     else:
         print("Only one mode is allowed")
-        print("\tpython detect_face_opencv_dnn -w           # webcam mode")
-        print("\tpython detect_face_opencv_dnn -i img_path  # image mode")
-        print("\tpython detect_face_opencv_dnn -v vid_path  # video mode")
+        print("\tpython detect_face_opencv_dnn.py -w           # webcam mode")
+        print("\tpython detect_face_opencv_dnn.py -i img_path  # image mode")
+        print("\tpython detect_face_opencv_dnn.py -v vid_path  # video mode")
 
 
 if __name__ == "__main__":

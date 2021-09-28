@@ -6,28 +6,6 @@ import os
 from modules.common_utils import get_argparse
 
 
-def main():
-    parser = get_argparse(description="MTCNN face detection")
-    parser.remove_arguments(["model", "prototxt"])
-    args = parser.parse_args()
-
-    # load model
-    net = MTCNN()
-
-    # choose inference mode
-    if args.webcam and args.image is None and args.video is None:
-        inference_webcam(net, args.threshold)
-    elif args.image and args.video is None and args.webcam is False:
-        inference_img(net, args.image, args.threshold)
-    elif args.video and args.image is None and args.webcam is False:
-        inference_vid(net, args.video, args.threshold)
-    else:
-        print("Only one mode is allowed")
-        print("\tpython detect_face_mtcnn -w              # webcam mode")
-        print("\tpython detect_face_mtcnn -i img_path     # image mode")
-        print("\tpython detect_face_mtcnn -v vid_path     # video mode")
-
-
 # draw an image with detected objects
 def draw_image_with_boxes(img, result_list, threshold, waitKey_val=0):
     # plot each box
@@ -90,6 +68,28 @@ def inference_vid(net, vid, threshold):
 
 def inference_webcam(net, threshold):
     inference_vid(net, 0, threshold)
+
+
+def main():
+    parser = get_argparse(description="MTCNN face detection")
+    parser.remove_arguments(["model", "prototxt"])
+    args = parser.parse_args()
+
+    # load model
+    net = MTCNN()
+
+    # choose inference mode
+    if args.webcam and args.image is None and args.video is None:
+        inference_webcam(net, args.threshold)
+    elif args.image and args.video is None and args.webcam is False:
+        inference_img(net, args.image, args.threshold)
+    elif args.video and args.image is None and args.webcam is False:
+        inference_vid(net, args.video, args.threshold)
+    else:
+        print("Only one mode is allowed")
+        print("\tpython detect_face_mtcnn.py -w              # webcam mode")
+        print("\tpython detect_face_mtcnn.py -i img_path     # image mode")
+        print("\tpython detect_face_mtcnn.py -v vid_path     # video mode")
 
 
 if __name__ == "__main__":

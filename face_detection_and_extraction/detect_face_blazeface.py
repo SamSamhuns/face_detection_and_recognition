@@ -3,9 +3,10 @@ import torch
 import cv2
 import os
 
-from modules.common_utils import get_argparse
-from modules.blazeface.blazeface import BlazeFace, plot_detections
+from modules.common_utils import get_argparse, get_file_type
+from modules.common_utils import pad_resize_image, scale_coords
 from modules.blazeface.onnx_export import preprocess_onnx
+from modules.blazeface.blazeface import BlazeFace, plot_detections
 
 
 def load_net(model):
@@ -33,21 +34,20 @@ def load_net(model):
 
 
 def inference_pytorch_model(net, cv2_img, back_model=True):
-    if back_model:
-        w, h = 256, 256
-    else:
-        w, h = 128, 128
-    img = cv2.resize(cv2_img[..., ::-1], (w, h))
+    new_size = (256, 256) if back_model else (128, 128)
+    cv2_img = cv2_img[..., ::-1]  # BGR to RGB
+    img = pad_resize_image(cv2_img, new_size)
     detections = net.predict_on_image(img)
     detections = detections.cpu().numpy() if detections.cuda else detections
     return detections
 
 
 def inference_onnx_model(net, runtime, cv2_img, back_model=True):
-    img = preprocess_onnx(cv2_img, back_model=back_model)
-    outputs = runtime.run(None, {
-        "images": img
-    })
+    new_size = (256, 256) if back_model else (128, 128)
+    img = pad_resize_image(cv2_img, new_size)
+    cv2.imshow('in', img)
+    img = preprocess_onnx(img, back_model=back_model)
+    outputs = runtime.run(None, {"images": img})
     use_numpy = True
 
     # Postprocess the raw predictions:
@@ -84,7 +84,6 @@ def inference_img(net, runtime, back_model, img, threshold, waitKey_val=0):
     else:
         raise Exception("image cannot be read")
 
-    (h, w) = image.shape[:2]
     # pass the image through the network and
     # obtain the detections and predictions
     if runtime is None:  # pytorch inference
@@ -92,8 +91,9 @@ def inference_img(net, runtime, back_model, img, threshold, waitKey_val=0):
     else:                # onnx inference
         detections = inference_onnx_model(net, runtime, image, back_model)
 
+    model_in_HW = (256, 256) if back_model else (128, 128)
     plot_detections(
-        image, detections, threshold=threshold, with_keypoints=True, output_path=None)
+        image, detections, model_in_HW=model_in_HW, threshold=threshold, with_keypoints=True)
 
     # show the output image
     cv2.imshow("output", image)
@@ -106,7 +106,8 @@ def inference_vid(net, runtime, back_model, vid, threshold):
 
     while ret:
         # inference and display the resulting frame
-        inference_img(net, runtime, back_model, frame, threshold, waitKey_val=5)
+        inference_img(net, runtime, back_model,
+                      frame, threshold, waitKey_val=5)
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
@@ -116,8 +117,8 @@ def inference_vid(net, runtime, back_model, vid, threshold):
     cv2.destroyAllWindows()
 
 
-def inference_webcam(net, runtime, back_model, threshold):
-    inference_vid(net, runtime, back_model, 0, threshold)
+def inference_webcam(net, runtime, back_model, cam_index, threshold):
+    inference_vid(net, runtime, back_model, cam_index, threshold)
 
 
 def main():
@@ -133,17 +134,15 @@ def main():
 
     net, runtime, back_model = load_net(args.model)
     # choose inference mode
-    if args.webcam and args.image is None and args.video is None:
-        inference_webcam(net, runtime, back_model, args.threshold)
-    elif args.image and args.video is None and args.webcam is False:
-        inference_img(net, runtime, back_model, args.image, args.threshold)
-    elif args.video and args.image is None and args.webcam is False:
-        inference_vid(net, runtime, back_model, args.video, args.threshold)
+    input_type = get_file_type(args.input_src)
+    if input_type == "camera":
+        inference_webcam(net, runtime, back_model, int(args.input_src), args.threshold)
+    elif input_type == "video":
+        inference_vid(net, runtime, back_model, args.input_src, args.threshold)
+    elif input_type == "image":
+        inference_img(net, runtime, back_model, args.input_src, args.threshold)
     else:
-        print("Only one mode is allowed")
-        print("\tpython detect_face_blazeface.py -w           # webcam mode")
-        print("\tpython detect_face_blazeface.py -i img_path  # image mode")
-        print("\tpython detect_face_blazeface.py -v vid_path  # video mode")
+        print("File type or inference mode not recognized. Use --help")
 
 
 if __name__ == "__main__":

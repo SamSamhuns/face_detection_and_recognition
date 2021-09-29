@@ -2,6 +2,7 @@ import argparse
 from typing import List
 
 import cv2
+import mimetypes
 import numpy as np
 
 
@@ -45,13 +46,11 @@ def get_argparse(*args, **kwargs):
         add new arguments with parser.add_argument(...)
     """
     parser = ArgumentParserMod(*args, **kwargs)
-    parser.add_argument("-i", "--image",
-                        help="Path to input image")
-    parser.add_argument("-v", "--video",
-                        help="Path to input video")
-    parser.add_argument("-w", "--webcam",
-                        action='store_true',
-                        help="Webcam mode.")
+    parser.add_argument("-i", "--input_src", default='0',
+                        help="Path to input image/video/cam_index:\n" +
+                             "\t IMAGE_DDOE       -i <PATH_TO_IMG>\n" +
+                             "\t VIDEO_MODE       -i <PATH_TO_VID>\n" +
+                             "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n")
     parser.add_argument("-m", "--model",
                         default="weights/opencv_dnn_caffe/res10_300x300_ssd_iter_140000.caffemodel",
                         help='Path to model file. (default: %(default)s)')
@@ -65,7 +64,7 @@ def get_argparse(*args, **kwargs):
     return parser
 
 
-def _fix_path_for_globbing(dir):
+def fix_path_for_globbing(dir):
     """ Add * at the end of paths for proper globbing
     """
     if dir[-1] == '/':         # data/
@@ -77,18 +76,42 @@ def _fix_path_for_globbing(dir):
     return dir
 
 
+def get_file_type(file_src):
+    """
+    Returns if a file is image/video/camera/None based on extension or int type
+    """
+    if file_src.isnumeric():
+        return 'camera'
+    mimetypes.init()
+    mimestart = mimetypes.guess_type(file_src)[0]
+
+    file_type = None
+    if mimestart is not None:
+        mimestart = mimestart.split('/')[0]
+        if mimestart in ['video', 'image']:
+            file_type = mimestart
+    return file_type
+
+
 def get_distinct_rgb_color(index):
     """
     Get a RGB color from a pre-defined colors list
     """
     color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),
-                  (0, 0, 0), (128, 0, 0), (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128),
-                  (0, 128, 128), (128, 128, 128), (192, 0, 0), (0, 192, 0), (0, 0, 192), (192, 192, 0),
-                  (192, 0, 192), (0, 192, 192), (192, 192, 192), (64, 0, 0), (0, 64, 0), (0, 0, 64),
-                  (64, 64, 0), (64, 0, 64), (0, 64, 64), (64, 64, 64), (32, 0, 0), (0, 32, 0),
-                  (0, 0, 32), (32, 32, 0), (32, 0, 32), (0, 32, 32), (32, 32, 32), (96, 0, 0), (0, 96, 0),
-                  (0, 0, 96), (96, 96, 0), (96, 0, 96), (0, 96, 96), (96, 96, 96), (160, 0, 0), (0, 160, 0),
-                  (0, 0, 160), (160, 160, 0), (160, 0, 160), (0, 160, 160), (160, 160, 160), (224, 0, 0),
+                  (0, 0, 0), (128, 0, 0), (0, 128, 0), (0,
+                                                        0, 128), (128, 128, 0), (128, 0, 128),
+                  (0, 128, 128), (128, 128, 128), (192, 0,
+                                                   0), (0, 192, 0), (0, 0, 192), (192, 192, 0),
+                  (192, 0, 192), (0, 192, 192), (192, 192,
+                                                 192), (64, 0, 0), (0, 64, 0), (0, 0, 64),
+                  (64, 64, 0), (64, 0, 64), (0, 64,
+                                             64), (64, 64, 64), (32, 0, 0), (0, 32, 0),
+                  (0, 0, 32), (32, 32, 0), (32, 0, 32), (0, 32,
+                                                         32), (32, 32, 32), (96, 0, 0), (0, 96, 0),
+                  (0, 0, 96), (96, 96, 0), (96, 0, 96), (0, 96,
+                                                         96), (96, 96, 96), (160, 0, 0), (0, 160, 0),
+                  (0, 0, 160), (160, 160, 0), (160, 0, 160), (0,
+                                                              160, 160), (160, 160, 160), (224, 0, 0),
                   (0, 224, 0), (0, 0, 224), (224, 224, 0), (224, 0, 224), (0, 224, 224), (224, 224, 224)]
     if index >= len(color_list):
         print(
@@ -111,18 +134,19 @@ def pad_resize_image(cv2_img, new_size=(640, 480), color=(125, 125, 125)) -> np.
     # rescale down
     scale = min(new_w / in_w, new_h / in_h)
     # get new sacled widths and heights
-    scl_new_w, scl_new_h = int(in_w * scale), int(in_h * scale)
-    rsz_img = cv2.resize(cv2_img, (scl_new_w, scl_new_h))
+    scale_new_w, scale_new_h = int(in_w * scale), int(in_h * scale)
+    resized_img = cv2.resize(cv2_img, (scale_new_w, scale_new_h))
     # calculate deltas for padding
-    d_w = max(new_w - scl_new_w, 0)
-    d_h = max(new_h - scl_new_h, 0)
+    d_w = max(new_w - scale_new_w, 0)
+    d_h = max(new_h - scale_new_h, 0)
     # center image with padding on top/bottom or left/right
     top, bottom = d_h // 2, d_h - (d_h // 2)
     left, right = d_w // 2, d_w - (d_w // 2)
-    pad_rsz_img = cv2.copyMakeBorder(rsz_img, top, bottom, left, right,
-                                     cv2.BORDER_CONSTANT,
-                                     value=color)
-    return pad_rsz_img
+    pad_resized_img = cv2.copyMakeBorder(resized_img,
+                                         top, bottom, left, right,
+                                         cv2.BORDER_CONSTANT,
+                                         value=color)
+    return pad_resized_img
 
 
 def clip_coords(boxes, img_shape):
@@ -142,7 +166,8 @@ def clip_coords(boxes, img_shape):
 def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     # Rescale coords (xyxy) from img1_shape to img0_shape
     if ratio_pad is None:  # calculate from img0_shape
-        gain = max(img1_shape) / max(img0_shape)  # gain  = old / new
+        gain = min(img1_shape[0] / img0_shape[0],
+                   img1_shape[1] / img0_shape[1])
         pad = (img1_shape[1] - img0_shape[1] * gain) / \
             2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
     else:

@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 import os
 
-from modules.common_utils import get_argparse
+from modules.common_utils import get_argparse, get_file_type
+from modules.common_utils import pad_resize_image, scale_coords
 
 
 class OVNetwork(object):
@@ -38,11 +39,12 @@ class OVNetwork(object):
 
 def inference_model(net, cv2_img):
     N, C, H, W = net.input_shape
-    resized = cv2.resize(cv2_img, (W, H))
+    resized = pad_resize_image(cv2_img, (W, H))  # padded resize
     resized = resized.transpose((2, 0, 1))  # HWC to CHW
     input_image = resized.reshape((N, C, H, W))
+    # openVINO expects BGR format
     detections = net.OVExec.infer(inputs={net.input_layer: input_image})
-    return detections
+    return detections[net.output_layer]
 
 
 def inference_img(net, img, threshold, waitKey_val=0):
@@ -58,26 +60,26 @@ def inference_img(net, img, threshold, waitKey_val=0):
     else:
         raise Exception("image cannot be read")
 
-    fh, fw = image.shape[:2]
+    h, w = image.shape[:2]
     # pass the image through the bnetwork obtain the detections
-    detections = inference_model(net, image)
-    count = 0
-    detections = detections[net.output_layer][0][0]
-    for detection in detections:
-        if detection[2] > threshold:
-            count += 1
-            xmin = int(detection[3] * fw)
-            ymin = int(detection[4] * fh)
-            xmax = int(detection[5] * fw)
-            ymax = int(detection[6] * fh)
-            cv2.rectangle(image, (xmin, ymin),
-                          (xmax, ymax), (0, 125, 255), 3)
-            text = f'label:{int(detection[1])}, conf:{round(detection[2], 2)}'
-            cv2.putText(image, text, (xmin, ymin - 7),
-                        cv2.FONT_HERSHEY_PLAIN, 0.8, (0, 125, 255), 1)
-    # print(f"Num of faces detected = {count} ")
-    # show the output image
-    cv2.imshow("output", image)
+    detections = inference_model(net, image)[0][0]
+
+    # filter dtections below threshold
+    detections = detections[detections[:, 2] > threshold]
+    # rescale detections to orig image size taking the padding into account
+    N, C, H, W = net.input_shape
+    boxes = detections[:, 3:7] * np.array([W, H, W, H])
+    boxes = scale_coords((H, W), boxes, (h, w)).round()
+
+    for i, box in enumerate(boxes):
+        xmin, ymin, xmax, ymax = box.astype('int')
+        cv2.rectangle(image, (xmin, ymin),
+                      (xmax, ymax), (0, 125, 255), 3)
+        text = f'label:{int(detections[i, 1])}, conf:{detections[i, 2]:.2f}'
+        cv2.putText(image, text, (xmin, ymin - 7),
+                    cv2.FONT_HERSHEY_PLAIN, 0.8, (0, 125, 255), 1)
+    # print(f"Num of faces detected = {i} ")
+    cv2.imshow("openvino", image)
     cv2.waitKey(waitKey_val)
 
 
@@ -91,14 +93,12 @@ def inference_vid(net, vid, threshold):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
-
-    # When everything done, release the capture
     cap.release()
     cv2.destroyAllWindows()
 
 
-def inference_webcam(net, threshold):
-    inference_vid(net, 0, threshold)
+def inference_webcam(net, cam_index, threshold):
+    inference_vid(net, cam_index, threshold)
 
 
 def main():
@@ -113,19 +113,16 @@ def main():
     args = parser.parse_args()
 
     net = OVNetwork(args.model_bin_path, args.model_xml_path, device="CPU")
-
     # choose inference mode
-    if args.webcam and args.image is None and args.video is None:
-        inference_webcam(net, args.threshold)
-    elif args.image and args.video is None and args.webcam is False:
-        inference_img(net, args.image, args.threshold)
-    elif args.video and args.image is None and args.webcam is False:
-        inference_vid(net, args.video, args.threshold)
+    input_type = get_file_type(args.input_src)
+    if input_type == "camera":
+        inference_webcam(net, int(args.input_src), args.threshold)
+    elif input_type == "video":
+        inference_vid(net, args.input_src, args.threshold)
+    elif input_type == "image":
+        inference_img(net, args.input_src, args.threshold)
     else:
-        print("Only one mode is allowed")
-        print("\tpython detect_face_openvino.py -w              # webcam mode")
-        print("\tpython detect_face_openvino.py -i img_path     # image mode")
-        print("\tpython detect_face_openvino.py -v vid_path     # video mode")
+        print("File type or inference mode not recognized. Use --help")
 
 
 if __name__ == "__main__":

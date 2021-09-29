@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import os
 
-from modules.common_utils import get_argparse
+from modules.common_utils import get_argparse, get_file_type
 
 
 # draw an image with detected objects
@@ -60,14 +60,12 @@ def inference_vid(net, vid, threshold):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
-
-    # When everything done, release the capture
     cap.release()
     cv2.destroyAllWindows()
 
 
-def inference_webcam(net, threshold):
-    inference_vid(net, 0, threshold)
+def inference_webcam(net, cam_index, threshold):
+    inference_vid(net, cam_index, threshold)
 
 
 def main():
@@ -79,17 +77,15 @@ def main():
     net = MTCNN()
 
     # choose inference mode
-    if args.webcam and args.image is None and args.video is None:
-        inference_webcam(net, args.threshold)
-    elif args.image and args.video is None and args.webcam is False:
-        inference_img(net, args.image, args.threshold)
-    elif args.video and args.image is None and args.webcam is False:
-        inference_vid(net, args.video, args.threshold)
+    input_type = get_file_type(args.input_src)
+    if input_type == "camera":
+        inference_webcam(net, int(args.input_src), args.threshold)
+    elif input_type == "video":
+        inference_vid(net, args.input_src, args.threshold)
+    elif input_type == "image":
+        inference_img(net, args.input_src, args.threshold)
     else:
-        print("Only one mode is allowed")
-        print("\tpython detect_face_mtcnn.py -w              # webcam mode")
-        print("\tpython detect_face_mtcnn.py -i img_path     # image mode")
-        print("\tpython detect_face_mtcnn.py -v vid_path     # video mode")
+        print("File type or inference mode not recognized. Use --help")
 
 
 if __name__ == "__main__":

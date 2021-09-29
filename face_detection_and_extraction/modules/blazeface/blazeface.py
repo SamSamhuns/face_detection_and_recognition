@@ -461,28 +461,63 @@ class BlazeFace(nn.Module):
         return output_detections
 
 
-def plot_detections(img, detections, threshold=0.5, with_keypoints=True, output_path="output.jpg"):
+def clip_coords(boxes, img_shape):
+    # Clip bounding xyxy bounding boxes to image shape (height, width)
+    if isinstance(boxes, np.ndarray):
+        boxes[:, 0].clip(0, img_shape[1], out=boxes[:, 0])  # x1
+        boxes[:, 1].clip(0, img_shape[0], out=boxes[:, 1])  # y1
+        boxes[:, 2].clip(0, img_shape[1], out=boxes[:, 2])  # x2
+        boxes[:, 3].clip(0, img_shape[0], out=boxes[:, 3])  # y2
+    else:  # torch.Tensor
+        boxes[:, 0].clamp_(0, img_shape[1])  # x1
+        boxes[:, 1].clamp_(0, img_shape[0])  # y1
+        boxes[:, 2].clamp_(0, img_shape[1])  # x2
+        boxes[:, 3].clamp_(0, img_shape[0])  # y2
 
+
+def scale_face_landmark_coords(img1_shape, coords, img0_shape, ratio_pad=None):
+    # Rescale coords (xyxy) from img1_shape to img0_shape
+    if ratio_pad is None:  # calculate from img0_shape
+        gain = min(img1_shape[0] / img0_shape[0],
+                   img1_shape[1] / img0_shape[1])
+        pad = (img1_shape[1] - img0_shape[1] * gain) / \
+            2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
+    else:
+        gain = ratio_pad[0][0]
+        pad = ratio_pad[1]
+    coords[:, [0, 2, 4, 6, 8, 10, 12, 14]] -= pad[0]  # x padding
+    coords[:, [1, 3, 5, 7, 9, 11, 13, 15]] -= pad[1]  # y padding
+    coords /= gain
+    clip_coords(coords, img0_shape)
+    return coords
+
+
+def plot_detections(cv2_img, detections, model_in_HW, threshold=0.5, with_keypoints=True):
+    H, W = model_in_HW
+    h, w = cv2_img.shape[:2]
     if detections.ndim == 1:
         detections = np.expand_dims(detections, axis=0)
-    # print("Found %d faces" % detections.shape[0])
-    for i in range(detections.shape[0]):
-        if detections[i, -1] < threshold:
-            continue
-        ymin = int(detections[i, 0] * img.shape[0])
-        xmin = int(detections[i, 1] * img.shape[1])
-        ymax = int(detections[i, 2] * img.shape[0])
-        xmax = int(detections[i, 3] * img.shape[1])
-        cv2.rectangle(img, (xmin, ymin), (xmax, ymax),
+    # filter weak detections
+    detections = detections[detections[:, -1] > threshold]
+    # change (ymin, xmin, ymax, xmax) tp (xmin, ymin, xmax, ymax) format
+    detections = detections[:, np.array(
+        [1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])]
+    # rescale detections to orig image size taking the padding into account
+    boxes = detections * \
+        np.array([W, H, W, H, W, H, W, H, W, H, W, H, W, H, W, H])
+    boxes = scale_face_landmark_coords((H, W), boxes, (h, w)).round()
+
+    for i, box in enumerate(boxes):
+        xmin, ymin, xmax, ymax = box[:4].astype('int')
+        cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax),
                       color=(0, 0, 255), thickness=1)
         if with_keypoints:
             for k in range(6):
-                kp_x = int(detections[i, 4 + k * 2] * img.shape[1])
-                kp_y = int(detections[i, 4 + k * 2 + 1] * img.shape[0])
-                cv2.circle(img, (kp_x, kp_y), radius=1,
+                kp_x = int(boxes[i, 4 + k * 2])
+                kp_y = int(boxes[i, 4 + k * 2 + 1])
+                cv2.circle(cv2_img, (kp_x, kp_y), radius=1,
                            color=(255, 0, 0), thickness=1)
-    if output_path is not None:
-        cv2.imwrite(output_path, img)
+    # print("Found %d faces" % boxes.shape[0])
 
 
 # IOU code from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/box_utils.py
@@ -560,16 +595,13 @@ def main():
     back_net.load_anchors("weights/blazeface/anchorsback.npy")
 
     orig_img = cv2.imread("modules/blazeface/test.jpeg")
-    output_path = "pytorch_output.jpg"
     img = cv2.resize(orig_img[..., ::-1], (256, 256))
     start_time = time.time()
 
     back_detections = back_net.predict_on_image(img)
     inference_time = time.time() - start_time
     print(f"Single img inf time:{inference_time:.2f}s, FPS:{1/inference_time}")
-    plot_detections(orig_img, back_detections,
-                    with_keypoints=True, output_path=output_path)
-    print(f"Saving output in {output_path}")
+    plot_detections(orig_img, back_detections, with_keypoints=True)
 
 
 if __name__ == "__main__":

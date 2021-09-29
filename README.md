@@ -21,22 +21,24 @@ $ pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
 
 ## Face Detection Models Implemented
 
-Performance recorded on a MacBook Pro with a **2.4 GHz 8-Core Intel Core i9** processor and **16 GB 2400 MHz DDR4** memory with no intensive programs running in the background.
+CPU Performance recorded on a MacBook Pro with a **2.4 GHz 8-Core Intel Core i9** processor and **16 GB 2400 MHz DDR4** memory with no intensive programs running in the background on a video (**original resolution 576x1024**) with two detectable faces.
 
-| Model                   | FPS  | Types                                                          |                  Supported                  |
-| :---------------------- | :--- | :------------------------------------------------------------- | :-----------------------------------------: |
-| blazeface               | TODO | front-camera <br/> back-camera                                 | :white_check_mark: <br/> :white_check_mark: |
-| mtcnn                   | TODO | mtcnn from facenet                                             |              :white_check_mark:             |
-| opencv face-detection   | TODO | caffemodel <br/> tensorflow graphdef                           | :white_check_mark: <br/> :white_check_mark: |
-| openvino face-detection | TODO | MobileNetV2 + multiple SSD <br/> SqueezeNet light + single SSD | :white_check_mark: <br/> :white_check_mark: |
-| yolov5-face             | TODO | yolov5s <br/> yolov5n                                          | :white_check_mark: <br/> :white_check_mark: |
-| arcface                 | TODO | arcface                                                        |             :white_large_square:            |
+| Model                   |          FPS         | <center>Types</center>                                                |          <center>Supported</center>         |
+| :---------------------- | :------------------: | :-------------------------------------------------------------------- | :-----------------------------------------: |
+| blazeface               | 21 <br/> 16 <br/> 30 | front-camera pytorch <br/> back-camera pytorch <br/> back-camera onnx | :white_check_mark: <br/> :white_check_mark: |
+| mtcnn                   |           2          | mtcnn from facenet                                                    |              :white_check_mark:             |
+| opencv face-detection   |      18 <br/> 19     | caffemodel <br/> tensorflow graphdef                                  | :white_check_mark: <br/> :white_check_mark: |
+| openvino face-detection |      25 <br/> 28     | MobileNetV2 + multiple SSD <br/> SqueezeNet light + single SSD        | :white_check_mark: <br/> :white_check_mark: |
+| yolov5-face             |     13 <br/>  13     | yolov5s <br/> yolov5n                                                 | :white_check_mark: <br/> :white_check_mark: |
+| arcface                 |         TODO         | arcface                                                               |             :white_large_square:            |
 
 ### Face Age and Gender Estimation
 
-| Model  | FPS  | Types                |      Supported     |
-| :----- | :--- | :------------------- | :----------------: |
-| opencv | TODO | Age and Gender Model | :white_check_mark: |
+Performance recorded with same parameters as face-detection above.
+
+| Model  | FPS | Types                |      Supported     |
+| :----- | :-- | :------------------- | :----------------: |
+| opencv | 12  | Age and Gender Model | :white_check_mark: |
 
 ## Face Detection and Extraction
 

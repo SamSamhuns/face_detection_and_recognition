@@ -30,7 +30,7 @@ Performance recorded on a MacBook Pro with a **2.4 GHz 8-Core Intel Core i9** pr
 | opencv face-detection   | TODO | caffemodel <br/> tensorflow graphdef                           | :white_check_mark: <br/> :white_check_mark: |
 | openvino face-detection | TODO | MobileNetV2 + multiple SSD <br/> SqueezeNet light + single SSD | :white_check_mark: <br/> :white_check_mark: |
 | yolov5-face             | TODO | yolov5s <br/> yolov5n                                          | :white_check_mark: <br/> :white_check_mark: |
-| arcface                 | TODO | arcface                                                        |                :white_square:               |
+| arcface                 | TODO | arcface                                                        |             :white_large_square:            |
 
 ### Face Age and Gender Estimation
 
@@ -48,9 +48,9 @@ Instructions inside `face_feat_extraction_and_filtering` for face feat extractio
 
 ### Acknowledgements
 
--  (YOLOv5-face)[https://github.com/deepcam-cn/yolov5-face]
--  (learnopencv age and gender models)[https://github.com/spmallick/learnopencv]
--  (mtcnn)[https://github.com/ipazc/mtcnn]
--  (blazeface-python)[https://github.com/hollance/BlazeFace-PyTorch]
--  (openvino-open_model_zoo)[https://github.com/openvinotoolkit/open_model_zoo]
--  (image orientation correction with DNNs)[https://d4nst.github.io/2017/01/12/image-orientation/]
+-   (YOLOv5-face)[https://github.com/deepcam-cn/yolov5-face]
+-   (learnopencv age and gender models)[https://github.com/spmallick/learnopencv]
+-   (mtcnn)[https://github.com/ipazc/mtcnn]
+-   (blazeface-python)[https://github.com/hollance/BlazeFace-PyTorch]
+-   (openvino-open_model_zoo)[https://github.com/openvinotoolkit/open_model_zoo]
+-   (image orientation correction with DNNs)[https://d4nst.github.io/2017/01/12/image-orientation/]

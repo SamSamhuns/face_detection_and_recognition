@@ -52,10 +52,10 @@ def get_argparse(*args, **kwargs):
                              "\t VIDEO_MODE       -i <PATH_TO_VID>\n" +
                              "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n")
     parser.add_argument("-m", "--model",
-                        default="weights/opencv_dnn_caffe/res10_300x300_ssd_iter_140000.caffemodel",
+                        default="weights/face-detection-caffe/res10_300x300_ssd_iter_140000.caffemodel",
                         help='Path to model file. (default: %(default)s)')
     parser.add_argument("-p", "--prototxt",
-                        default="weights/opencv_dnn_caffe/deploy.prototxt.txt",
+                        default="weights/face-detection-caffe/deploy.prototxt.txt",
                         help="Path to 'deploy' prototxt file. (default: %(default)s)")
     parser.add_argument("-t", "--threshold",
                         type=float, default=0.5,

@@ -9,7 +9,8 @@ from modules.common_utils import pad_resize_image, scale_coords
 class Net(object):
     __slots__ = ["face_net", "age_net", "gender_net",
                  "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE",
-                 "AGE_GENDER_MODEL_MEAN_VALUES", "age_list", "gender_list"]
+                 "AGE_GENDER_INPUT_SIZE", "AGE_GENDER_MODEL_MEAN_VALUES",
+                 "age_list", "gender_list"]
 
     def __init__(self, face_net, age_net, gender_net, model_in_size):
         self.face_net = face_net
@@ -17,7 +18,9 @@ class Net(object):
         self.gender_net = gender_net
         self.FACE_MODEL_INPUT_SIZE = model_in_size  # (width, height)
         self.FACE_MODEL_MEAN_VALUES = [104, 117, 123]
-        self.AGE_GENDER_MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
+        self.AGE_GENDER_INPUT_SIZE = (227, 227)
+        self.AGE_GENDER_MODEL_MEAN_VALUES = (
+            78.4263377603, 87.7689143744, 114.895847746)
         self.age_list = ['(0-2)', '(4-6)', '(8-12)', '(15-20)',
                          '(25-32)', '(38-43)', '(48-53)', '(60-100)']
         self.gender_list = ['Male', 'Female']
@@ -106,7 +109,7 @@ def inference_img(net, img, threshold, waitKey_val=0):
         face = image[max(0, bbox[1] - padding):min(bbox[3] + padding, image.shape[0] - 1),
                      max(0, bbox[0] - padding):min(bbox[2] + padding, image.shape[1] - 1)]
         face_blob = cv2.dnn.blobFromImage(
-            face, 1.0, (227, 227), net.AGE_GENDER_MODEL_MEAN_VALUES, swapRB=False)
+            face, 1.0, net.AGE_GENDER_INPUT_SIZE, net.AGE_GENDER_MODEL_MEAN_VALUES, swapRB=False)
         # estimate gender
         net.gender_net.setInput(face_blob)
         gender_preds = net.gender_net.forward()

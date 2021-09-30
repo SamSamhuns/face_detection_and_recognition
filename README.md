@@ -56,3 +56,4 @@ Instructions inside `face_feat_extraction_and_filtering` for face feat extractio
 -   (blazeface-python)[https://github.com/hollance/BlazeFace-PyTorch]
 -   (openvino-open_model_zoo)[https://github.com/openvinotoolkit/open_model_zoo]
 -   (image orientation correction with DNNs)[https://d4nst.github.io/2017/01/12/image-orientation/]
+-   (mobile facenet)[https://github.com/xuexingyu24/MobileFaceNet_Tutorial_Pytorch]

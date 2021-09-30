@@ -139,29 +139,17 @@ class MobileFaceNet(Module):
 
     def forward(self, x):
         out = self.conv1(x)
-
         out = self.conv2_dw(out)
-
         out = self.conv_23(out)
-
         out = self.conv_3(out)
-
         out = self.conv_34(out)
-
         out = self.conv_4(out)
-
         out = self.conv_45(out)
-
         out = self.conv_5(out)
-
         out = self.conv_6_sep(out)
-
         out = self.conv_6_dw(out)
-
         out = self.conv_6_flatten(out)
-
         out = self.linear(out)
-
         out = self.bn(out)
         return l2_norm(out)
 

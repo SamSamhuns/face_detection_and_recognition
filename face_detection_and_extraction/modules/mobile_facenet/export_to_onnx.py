@@ -8,6 +8,7 @@ from mobile_facenet import MobileFaceNet
 def export_to_onnx(pt_weight_path="weights/mobile_facenet/MobileFace_Net",
                    onnx_save_path="weights/mobile_facenet/mobile_facenet.onnx",
                    dynamic=True,
+                   simplify=True,
                    verbose=True):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -27,15 +28,15 @@ def export_to_onnx(pt_weight_path="weights/mobile_facenet/MobileFace_Net",
 
     in_name, out_name = 'images', 'embedding'
     in_shape_dict = {in_name:
-                     {0: 'batch', 1: "channel", 2: 'height', 3: 'width'}}
+                     {0: 'batch', 2: 'height', 3: 'width'}}
     out_shape_dict = {out_name:
-                      {0: "batch", 1: "channel", 2: "height", 3: "width"}}
+                      {0: "batch", 1: "vector"}}
     io_shapes_dict = {**in_shape_dict, **out_shape_dict}
 
     torch.onnx.export(model, dummy_input, onnx_save_path, verbose=False,
                       training=torch.onnx.TrainingMode.EVAL,
                       do_constant_folding=True,
-                      opset_version=11,
+                      opset_version=12,
                       input_names=[in_name],
                       output_names=[out_name],
                       dynamic_axes={**io_shapes_dict}
@@ -47,7 +48,24 @@ def export_to_onnx(pt_weight_path="weights/mobile_facenet/MobileFace_Net",
         print(onnx_model.graph.input)
         print("ONNX model output graph")
         print(onnx_model.graph.output)
-    print(f"ONNX export complete. Model saved to {onnx_save_path}")
+
+    # simplify
+    if simplify:
+        try:
+            import onnxsim
+            print(f'Simplifying with onnx-simplifier {onnxsim.__version__}...')
+            onnx_model, check = onnxsim.simplify(
+                onnx_model,
+                dynamic_input_shape=dynamic,
+                input_shapes={'images': list(dummy_input.shape)} if dynamic else None)
+            assert check, 'assert check failed'
+            onnx.save(onnx_model, onnx_save_path)
+            print(
+                f"ONNX model simplification complete. Model saved to {onnx_save_path}")
+        except Exception as e:
+            print(f'simplifier failure: {e}')
+    else:
+        print(f"ONNX export complete. Model saved to {onnx_save_path}")
 
     text_onnx_inference(onnx_save_path, dummy_input, torch_out)
 
@@ -66,8 +84,7 @@ def text_onnx_inference(onnx_save_path, onnx_input, torch_out):
     # compare ONNX Runtime and PyTorch results
     np.testing.assert_allclose(
         to_numpy(torch_out), ort_out[0], rtol=1e-03, atol=1e-05)
-
-    print("Exported model has been tested with ONNXRuntime, and the result are similar")
+    print("\x1b[6;30;42m SUCCESS: \x1b[0m Exported model has been tested with ONNXRuntime, and the results are similar")
 
 
 def main():

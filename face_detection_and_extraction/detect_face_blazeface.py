@@ -3,8 +3,8 @@ import torch
 import cv2
 import os
 
+from modules.common_utils import pad_resize_image
 from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import pad_resize_image, scale_coords
 from modules.blazeface.onnx_export import preprocess_onnx
 from modules.blazeface.blazeface import BlazeFace, plot_detections
 

@@ -7,7 +7,6 @@ from modules.common_utils import get_argparse, get_file_type
 from modules.common_utils import scale_coords
 
 from modules.yolov5_face.onnx.onnx_utils import preprocess_image, conv_strides_to_anchors, w_non_max_suppression
-# from modules.yolov5_face.pytorch.utils.general import non_max_suppression_face
 
 
 def load_net(model):
@@ -54,16 +53,6 @@ def plot_detections(detections, cv2_img, threshold, in_HW, line_thickness=None):
     return cv2_img
 
 
-def inference_pytorch_model(net, cv2_img, input_size, device):
-    img = preprocess_image(cv2_img, input_size=input_size)
-    img = torch.from_numpy(img).to(device)
-    with torch.no_grad():
-        pred = net(img)[0]
-    pred = non_max_suppression_face(pred, conf_thres=0.3, iou_thres=0.5)
-    detections = pred.cpu().numpy() if pred.cuda else pred
-    return detections
-
-
 def inference_onnx_model(net, cv2_img, input_size):
     img = preprocess_image(cv2_img, input_size=input_size)
     outputs = net.run(None, {"images": img})
@@ -87,12 +76,8 @@ def inference_img(net, img, input_size, threshold, waitKey_val=0):
     else:
         raise Exception("image cannot be read")
 
-    # pass the image through the network and
-    # obtain the detections
-    if isinstance(net, torch.nn.Module):  # pytorch inference
-        detections = inference_pytorch_model(net, image, input_size)
-    else:                                 # onnx inference
-        detections = inference_onnx_model(net, image, input_size)
+    # pass the image through the network and get detections
+    detections = inference_onnx_model(net, image, input_size)
 
     if detections is not None:
         plot_detections(detections, image, threshold=threshold, in_HW=input_size[::-1])

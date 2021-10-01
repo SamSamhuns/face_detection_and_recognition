@@ -9,7 +9,7 @@ from modules.common_utils import pad_resize_image, scale_coords
 class Net(object):
     __slots__ = ["face_net", "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE"]
 
-    def __init__(self, face_net, model_in_size):
+    def __init__(self, face_net, model_in_size=(300, 300)):
         self.face_net = face_net
         self.FACE_MODEL_INPUT_SIZE = model_in_size  # (width, height)
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
@@ -39,10 +39,12 @@ def load_net(model, prototxt, model_in_size=(300, 300), device="cpu"):
     return Net(face_net, model_in_size)
 
 
-def inference_model(net, cv2_img, new_size):
-    resized = pad_resize_image(cv2_img, new_size)
+def inference_model(net, cv2_img):
+    resized = pad_resize_image(cv2_img, net.FACE_MODEL_INPUT_SIZE)
     # opencv expects BGR format
-    blob = cv2.dnn.blobFromImage(resized, 1.0, new_size, (104.0, 117.0, 123.0))
+    blob = cv2.dnn.blobFromImage(resized, 1.0,
+                                 net.FACE_MODEL_INPUT_SIZE,
+                                 net.FACE_MODEL_MEAN_VALUES)
     net.face_net.setInput(blob)
     faces = net.face_net.forward()
     return faces
@@ -66,7 +68,7 @@ def inference_img(net, img, threshold, waitKey_val=0):
 
     # pass the blob through the network and
     # obtain the detections and predictions
-    detections = inference_model(net, image, net.FACE_MODEL_INPUT_SIZE)[0][0]
+    detections = inference_model(net, image)[0][0]
 
     # filter dtections below threshold
     detections = detections[detections[:, 2] > threshold]

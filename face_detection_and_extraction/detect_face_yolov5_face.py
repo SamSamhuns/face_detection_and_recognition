@@ -56,7 +56,6 @@ def plot_detections(detections, cv2_img, threshold, in_HW, line_thickness=None):
 def inference_onnx_model(net, cv2_img, input_size):
     img = preprocess_image(cv2_img, input_size=input_size)
     outputs = net.run(None, {"images": img})
-
     outputx = conv_strides_to_anchors(outputs, "cpu")
     detections = w_non_max_suppression(
         outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)

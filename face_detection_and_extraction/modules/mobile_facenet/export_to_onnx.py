@@ -9,18 +9,21 @@ def export_to_onnx(pt_weight_path="weights/mobile_facenet/MobileFace_Net",
                    onnx_save_path="weights/mobile_facenet/mobile_facenet.onnx",
                    dynamic=True,
                    simplify=True,
-                   verbose=True):
+                   verbose=True,
+                   embedding_vectors=512,
+                   input_size=(112, 112)):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # embeding size is 512 (feature vector)
-    model = MobileFaceNet(512).to(device)
+    model = MobileFaceNet(embedding_vectors).to(device)
     model.load_state_dict(torch.load(
         pt_weight_path, map_location=lambda storage, loc: storage))
     model.eval()
     if verbose:
         print('mobile_facenet face embedding extraction model loaded')
 
-    dummy_input = torch.Tensor(np.ones([2, 3, 112, 112]))
+    w, h = input_size
+    dummy_input = torch.Tensor(np.ones([2, 3, h, w]))
     torch_out = model(dummy_input)
     if verbose:
         print(f"torch input shape: {dummy_input.shape}")
@@ -28,9 +31,9 @@ def export_to_onnx(pt_weight_path="weights/mobile_facenet/MobileFace_Net",
 
     in_name, out_name = 'images', 'embedding'
     in_shape_dict = {in_name:
-                     {0: 'batch', 2: 'height', 3: 'width'}}
+                     {0: 'batch'}}
     out_shape_dict = {out_name:
-                      {0: "batch", 1: "vector"}}
+                      {0: "batch"}}
     io_shapes_dict = {**in_shape_dict, **out_shape_dict}
 
     torch.onnx.export(model, dummy_input, onnx_save_path, verbose=False,

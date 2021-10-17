@@ -29,13 +29,14 @@ def load_net(model):
 def plot_detections(detections, cv2_img, threshold, in_HW, line_thickness=None):
     # plot detections on cv2_img
 
-    # filter weak detections
+    # filter detections below threshold
     detections = detections[detections[..., 4] > threshold]
     boxs = detections[..., :4].numpy()
     confs = detections[..., 4].numpy()
 
     mh, mw = in_HW
     h, w = cv2_img.shape[:2]
+    # rescale detections to orig image size taking the padding into account
     boxs = scale_coords((mh, mw), boxs, (h, w)).round()
     tl = line_thickness or round(0.002 * (w + h) / 2) + 1
     for i, box in enumerate(boxs):

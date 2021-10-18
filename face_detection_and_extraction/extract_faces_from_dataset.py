@@ -5,6 +5,7 @@ import os
 import cv2
 import glob
 import logging
+import mimetypes
 import onnxruntime
 import numpy as np
 from tqdm import tqdm
@@ -14,15 +15,18 @@ from modules.common_utils import get_argparse, fix_path_for_globbing
 from modules.common_utils import pad_resize_image, scale_coords
 from modules.yolov5_face.onnx.onnx_utils import preprocess_image, conv_strides_to_anchors, w_non_max_suppression
 
-
+mimetypes.init()
 today = datetime.today()
 year, month, day, hour, minute, sec = today.year, today.month, today.day, today.hour, today.minute, today.second
 
 os.makedirs("logs", exist_ok=True)
-logging.basicConfig(filename=f'logs/extraction_statistics_{year}_{month}_{day}_{hour}_{minute}_{sec}.log',
+logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{hour}:{minute}:{sec}.log',
                     level=logging.INFO)
-VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm'}
-# VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm', 'mp4', 'avi'}
+
+MAX_N_FRAME_FROM_VID = 200  # max number of frames from which faces are extracted
+
+VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
+                   'mp4', 'avi'}
 
 
 # #################### Raw Data Organization #########################
@@ -43,19 +47,33 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm'}
 
 
 class Net(object):
-    __slots__ = ["face_net", "inf_func", "bbox_conf_func", "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE"]
+    __slots__ = ["face_net", "inf_func", "bbox_conf_func",
+                 "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE"]
 
-    def __init__(self, face_net, inf_func, bbox_conf_func, model_in_size=(300, 300)):
+    def __init__(self, face_net, inf_func, bbox_conf_func, model_in_size=(640, 640), model_out_size=None):
         self.face_net = face_net
         self.inf_func = inf_func
         self.bbox_conf_func = bbox_conf_func
         # (width, height)
-        self.FACE_MODEL_INPUT_SIZE = list(map(int, model_in_size))
+        self.FACE_MODEL_INPUT_SIZE = tuple(map(int, model_in_size))
         # only for cv2 models
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
+        # (width, height), size the detected faces are resized
+        # if None, no resizing is done
+        self.FACE_MODEL_OUTPUT_SIZE = tuple(
+            map(int, model_out_size)) if model_out_size is not None else None
 
 
-def load_net(model, prototxt, model_in_size=(300, 300), device="cpu"):
+def get_img_vid_media_type(fname):
+    mimestart = mimetypes.guess_type(fname)[0]
+    if mimestart is not None:
+        mimestart = mimestart.split('/')[0]
+        if mimestart in ['video', 'image']:
+            return mimestart
+    return None
+
+
+def load_net(model, prototxt, model_in_size=(300, 300), model_out_size=(112, 112), device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -84,7 +102,7 @@ def load_net(model, prototxt, model_in_size=(300, 300), device="cpu"):
             print("Using GPU device")
         inf_func = inference_cv2_model
         bbox_conf_func = get_bboxes_and_confs_from_cv2_dets
-    return Net(face_net, inf_func, bbox_conf_func, model_in_size)
+    return Net(face_net, inf_func, bbox_conf_func, model_in_size, model_out_size)
 
 
 def inference_cv2_model(net, cv2_img, input_size):
@@ -139,19 +157,21 @@ def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_s
     return boxes, confs
 
 
-def extract_face_list(net, img_path, threshold=0.5):
+def extract_face_list(net, img, threshold=0.5):
     """returns a list of cv2 images containing faces
     """
-    if isinstance(img_path, str):
-        image = cv2.imread(img_path)
-    elif isinstance(img_path, np.ndarray):
-        image = img_path
+    if isinstance(img, str):
+        image = cv2.imread(img)
+    elif isinstance(img, np.ndarray):
+        image = img
 
     h, w = image.shape[:2]
     iw, ih = net.FACE_MODEL_INPUT_SIZE
 
     # pass the blob through the network to get raw detections
     detections = net.inf_func(net, image, net.FACE_MODEL_INPUT_SIZE)
+    if detections is None:  # no faces detected
+        return []
     # obtain bounding boxesx and conf scores
     boxes, confs = net.bbox_conf_func(
         detections, threshold, orig_size=(w, h), in_size=(iw, ih))
@@ -170,11 +190,13 @@ def extract_face_list(net, img_path, threshold=0.5):
         x, y, xw, yh = max(x, 0), max(y, 0), min(xw, w), min(yh, h)
         # .copy() only keeps crops in memory
         face = image[y:yh, x:xw].copy()
+        if net.FACE_MODEL_OUTPUT_SIZE is not None:
+            face = cv2.resize(face, (net.FACE_MODEL_OUTPUT_SIZE))
         face_list.append(face)
     return face_list
 
 
-def save_extracted_faces(face_img_list, target_dir, class_name) -> None:
+def save_extracted_faces(media_prefix_name_list, faces_per_img_list, target_dir, class_name) -> None:
     """
     args;
         face_img_list: list of cropped faces as np.ndarray
@@ -183,17 +205,19 @@ def save_extracted_faces(face_img_list, target_dir, class_name) -> None:
     """
     class_dir = os.path.join(target_dir, class_name)
     os.makedirs(class_dir, exist_ok=True)
+    total = 0
 
-    i = 0
-    for face_img in face_img_list:
-        i += 1
-        cv2.imwrite(f"{class_dir}/{i}.jpg", face_img)
+    for prefix, face_img_list in zip(media_prefix_name_list, faces_per_img_list):
+        i = 0
+        for face_img in face_img_list:
+            i += 1
+            cv2.imwrite(f"{class_dir}/{prefix}_face_{i}.jpg", face_img)
+        total += i
+    logging.info(f"{total} faces extracted for class {class_name}")
 
-    logging.info(f"{i} faces extracted for class {class_name}")
 
-
-def filter_faces_from_data(raw_img_dir, target_img_dir, net, threshold):
-    os.makedirs(target_img_dir, exist_ok=True)
+def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
+    os.makedirs(target_dir, exist_ok=True)
     dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
 
     # for each class in raw data
@@ -206,12 +230,38 @@ def filter_faces_from_data(raw_img_dir, target_img_dir, net, threshold):
         file_path_list = [file for file in glob.glob(dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
 
-        class_face_img_list = []
-        for img_path in file_path_list:
-            class_face_img_list.extend(
-                extract_face_list(net, img_path, threshold))
+        # foreach image or video in file_path_list
+        for media_path in file_path_list:
+            faces_img_list = []
+            media_prefix_name_list = []
+            mtype = get_img_vid_media_type(media_path)
+            if mtype == "image":
+                media_prefix_name_list.append(
+                    os.path.basename(media_path).split('.')[0])
+                faces_img_list.append(
+                    extract_face_list(net, media_path, threshold))
+            elif mtype == "video":
+                cap = cv2.VideoCapture(media_path)
+                step = int(round(cap.get(cv2.CAP_PROP_FPS)))
+                i = 0
+                save_frames_num = 0
+                ret, frame = cap.read()
+                while ret:
+                    i += 1
+                    if i % step == 0 or i == 1:
+                        save_frames_num += 1
+                        if save_frames_num > MAX_N_FRAME_FROM_VID:
+                            break
+                        media_prefix_name_list.append(
+                            os.path.basename(media_path).split('.')[0] + f"_sec_{i//step}_")
+                        faces_img_list.append(
+                            extract_face_list(net, frame, threshold))
+                    ret, frame = cap.read()
+                cap.release()
+                cv2.destroyAllWindows()
 
-        save_extracted_faces(class_face_img_list, target_img_dir, class_name)
+            save_extracted_faces(
+                media_prefix_name_list, faces_img_list, target_dir, class_name)
 
 
 def main():
@@ -232,12 +282,16 @@ def main():
                         nargs=2,
                         default=(300, 400),
                         help='Input images are resized to this (width, height) -is 300 400. (default: %(default)s).')
+    parser.add_argument("-os", "--output_size",
+                        nargs=2,
+                        help='Output face images are resized to this (width, height) -os 112 112. (default: %(default)s).')
     args = parser.parse_args()
     print("Current Arguments: ", args)
 
     net = load_net(args.model,
                    args.prototxt,
                    model_in_size=args.input_size,
+                   model_out_size=args.output_size,
                    device=args.device)
 
     filter_faces_from_data(args.raw_datadir_path,

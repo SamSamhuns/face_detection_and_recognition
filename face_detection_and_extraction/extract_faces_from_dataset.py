@@ -23,8 +23,10 @@ os.makedirs("logs", exist_ok=True)
 logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{hour}:{minute}:{sec}.log',
                     level=logging.INFO)
 
-MAX_N_FRAME_FROM_VID = 200  # max number of frames from which faces are extracted
+# ######################## Settings ##################################
 
+SAVE_VIDEO_FACES_IN_SUBDIRS = True
+MAX_N_FRAME_FROM_VID = 200  # max number of frames from which faces are extracted
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
                    'mp4', 'avi'}
 
@@ -157,8 +159,8 @@ def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_s
     return boxes, confs
 
 
-def extract_face_list(net, img, threshold=0.5):
-    """returns a list of cv2 images containing faces
+def extract_face_and_conf_list(net, img, threshold=0.5):
+    """returns a tuple of two lists: cv2 images containing faces, conf of said face dets
     """
     if isinstance(img, str):
         image = cv2.imread(img)
@@ -171,7 +173,7 @@ def extract_face_list(net, img, threshold=0.5):
     # pass the blob through the network to get raw detections
     detections = net.inf_func(net, image, net.FACE_MODEL_INPUT_SIZE)
     if detections is None:  # no faces detected
-        return []
+        return [], []
     # obtain bounding boxesx and conf scores
     boxes, confs = net.bbox_conf_func(
         detections, threshold, orig_size=(w, h), in_size=(iw, ih))
@@ -193,27 +195,25 @@ def extract_face_list(net, img, threshold=0.5):
         if net.FACE_MODEL_OUTPUT_SIZE is not None:
             face = cv2.resize(face, (net.FACE_MODEL_OUTPUT_SIZE))
         face_list.append(face)
-    return face_list
+    return face_list, confs
 
 
-def save_extracted_faces(media_prefix_name_list, faces_per_img_list, target_dir, class_name) -> None:
+def save_extracted_faces(media_prefix_name_list, faces_img_list, faces_conf_list, faces_save_dir) -> None:
     """
     args;
         face_img_list: list of cropped faces as np.ndarray
         target_dir: dir where face imgs are saved in class dirs
         class_name: name of class
     """
-    class_dir = os.path.join(target_dir, class_name)
-    os.makedirs(class_dir, exist_ok=True)
     total = 0
-
-    for prefix, face_img_list in zip(media_prefix_name_list, faces_per_img_list):
+    for prefix, face_img_list, face_conf_list in zip(media_prefix_name_list, faces_img_list, faces_conf_list):
         i = 0
-        for face_img in face_img_list:
+        for face_img, face_conf in zip(face_img_list, face_conf_list):
             i += 1
-            cv2.imwrite(f"{class_dir}/{prefix}_face_{i}.jpg", face_img)
+            face_conf = round(face_conf, 3)
+            cv2.imwrite(f"{faces_save_dir}/{prefix}_face_{i}_conf_{str(face_conf).replace('.', '_')}.jpg", face_img)
         total += i
-    logging.info(f"{total} faces extracted for class {class_name}")
+    return total
 
 
 def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
@@ -226,21 +226,31 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
         if not os.path.isdir(dir):       # skip if path is not a dir
             continue
         class_name = dir.split("/")[-1]  # get class name
-
         file_path_list = [file for file in glob.glob(dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
-
+        total_faces = 0
         # foreach image or video in file_path_list
         for media_path in file_path_list:
+            # create dir for saving faces per class
+            faces_save_dir = os.path.join(target_dir, class_name)
+            os.makedirs(faces_save_dir, exist_ok=True)
+
             faces_img_list = []
+            faces_conf_list = []
             media_prefix_name_list = []
+            media_root = os.path.basename(media_path).split('.')[0]
             mtype = get_img_vid_media_type(media_path)
             if mtype == "image":
-                media_prefix_name_list.append(
-                    os.path.basename(media_path).split('.')[0])
-                faces_img_list.append(
-                    extract_face_list(net, media_path, threshold))
+                media_prefix_name_list.append(media_root)
+                faces, confs = extract_face_and_conf_list(net, media_path, threshold)
+                faces_img_list.append(faces)
+                faces_conf_list.append(confs)
             elif mtype == "video":
+                # save faces from videos inside sub dirs if flag is set
+                if SAVE_VIDEO_FACES_IN_SUBDIRS:
+                    faces_save_dir = os.path.join(faces_save_dir, media_root)
+                    os.makedirs(faces_save_dir, exist_ok=True)
+
                 cap = cv2.VideoCapture(media_path)
                 step = int(round(cap.get(cv2.CAP_PROP_FPS)))
                 i = 0
@@ -252,16 +262,19 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
                         save_frames_num += 1
                         if save_frames_num > MAX_N_FRAME_FROM_VID:
                             break
-                        media_prefix_name_list.append(
-                            os.path.basename(media_path).split('.')[0] + f"_sec_{i//step}_")
-                        faces_img_list.append(
-                            extract_face_list(net, frame, threshold))
+                        mprefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
+                        media_prefix_name_list.append(mprefix + f"sec_{i//step}_")
+                        faces, confs = extract_face_and_conf_list(net, frame, threshold)
+                        faces_img_list.append(faces)
+                        faces_conf_list.append(confs)
                     ret, frame = cap.read()
                 cap.release()
                 cv2.destroyAllWindows()
 
-            save_extracted_faces(
-                media_prefix_name_list, faces_img_list, target_dir, class_name)
+            faces_extracted = save_extracted_faces(
+                media_prefix_name_list, faces_img_list, faces_conf_list, faces_save_dir)
+            total_faces += faces_extracted
+        logging.info(f"{total_faces} faces extracted for class {class_name}")
 
 
 def main():

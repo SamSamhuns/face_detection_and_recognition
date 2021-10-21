@@ -97,22 +97,20 @@ def get_distinct_rgb_color(index):
     """
     Get a RGB color from a pre-defined colors list
     """
-    color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),
-                  (0, 0, 0), (128, 0, 0), (0, 128, 0), (0,
-                                                        0, 128), (128, 128, 0), (128, 0, 128),
-                  (0, 128, 128), (128, 128, 128), (192, 0,
-                                                   0), (0, 192, 0), (0, 0, 192), (192, 192, 0),
-                  (192, 0, 192), (0, 192, 192), (192, 192,
-                                                 192), (64, 0, 0), (0, 64, 0), (0, 0, 64),
-                  (64, 64, 0), (64, 0, 64), (0, 64,
-                                             64), (64, 64, 64), (32, 0, 0), (0, 32, 0),
-                  (0, 0, 32), (32, 32, 0), (32, 0, 32), (0, 32,
-                                                         32), (32, 32, 32), (96, 0, 0), (0, 96, 0),
-                  (0, 0, 96), (96, 96, 0), (96, 0, 96), (0, 96,
-                                                         96), (96, 96, 96), (160, 0, 0), (0, 160, 0),
-                  (0, 0, 160), (160, 160, 0), (160, 0, 160), (0,
-                                                              160, 160), (160, 160, 160), (224, 0, 0),
-                  (0, 224, 0), (0, 0, 224), (224, 224, 0), (224, 0, 224), (0, 224, 224), (224, 224, 224)]
+    color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
+                  (255, 0, 255),  (0, 255, 255), (0, 0, 0), (128, 0, 0),
+                  (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128),
+                  (0, 128, 128), (128, 128, 128), (192, 0, 0), (0, 192, 0),
+                  (0, 0, 192), (192, 192, 0), (192, 0, 192), (0, 192, 192),
+                  (192, 192, 192), (64, 0, 0), (0, 64, 0), (0, 0, 64),
+                  (64, 64, 0), (64, 0, 64), (0, 64, 64), (64, 64, 64),
+                  (32, 0, 0), (0, 32, 0), (0, 0, 32), (32, 32, 0),
+                  (32, 0, 32), (0, 32, 32), (32, 32, 32), (96, 0, 0),
+                  (0, 96, 0), (0, 0, 96), (96, 96, 0), (96, 0, 96), (0, 96, 96),
+                  (96, 96, 96), (160, 0, 0), (0, 160, 0), (0, 0, 160),
+                  (160, 160, 0), (160, 0, 160), (0, 160, 160), (160, 160, 160),
+                  (224, 0, 0), (0, 224, 0), (0, 0, 224), (224, 224, 0),
+                  (224, 0, 224), (0, 224, 224), (224, 224, 224)]
     if index >= len(color_list):
         print(
             f"WARNING:color index {index} exceeds available number of colors {len(color_list)}. Cycling colors now")
@@ -179,3 +177,25 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     coords[:, :4] /= gain
     clip_coords(coords, img0_shape)
     return coords
+
+
+def calculate_bbox_iou(bbox1, bbox2):
+    """
+    bboxes must have coords in fmt (xmin, ymin, xmax, ymax)
+    args:
+        bbox1: x1min, y1min, x1max, y1max
+        bbox2: x2min, y2min, x2max, y2max
+    return:
+        bounding box IOU between 0 and 1
+    """
+    x1min, y1min, x1max, y1max = bbox1
+    x2min, y2min, x2max, y2max = bbox2
+    x_diff = min(x1max, x2max) - max(x1min, x2min)
+    y_diff = min(y1max, y2max) - max(y1min, y2min)
+    iou = 0
+    if x_diff < 0 or y_diff < 0:  # bboxes do not intersect
+        return iou
+    intersect = x_diff * y_diff
+    iou = intersect / (((x1max - x1min) * (y1max - y1min)) +
+                       ((x2max - x2min) * (y2max - y2min)) - intersect)
+    return iou

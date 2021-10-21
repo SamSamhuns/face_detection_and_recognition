@@ -6,7 +6,7 @@ import os
 from modules.common_utils import get_argparse, get_file_type
 from modules.common_utils import scale_coords
 
-from modules.yolov5_face.onnx.onnx_utils import preprocess_image, conv_strides_to_anchors, w_non_max_suppression
+from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
 
 
 def load_net(model):
@@ -26,7 +26,7 @@ def load_net(model):
     return net
 
 
-def plot_detections(detections, cv2_img, threshold, in_HW, line_thickness=None):
+def plot_detections(detections, cv2_img, threshold, in_size_WH, line_thickness=None):
     # plot detections on cv2_img
 
     # filter detections below threshold
@@ -34,7 +34,7 @@ def plot_detections(detections, cv2_img, threshold, in_HW, line_thickness=None):
     boxs = detections[..., :4].numpy()
     confs = detections[..., 4].numpy()
 
-    mh, mw = in_HW
+    mw, mh = in_size_WH
     h, w = cv2_img.shape[:2]
     # rescale detections to orig image size taking the padding into account
     boxs = scale_coords((mh, mw), boxs, (h, w)).round()
@@ -80,7 +80,7 @@ def inference_img(net, img, input_size, threshold, waitKey_val=0):
     detections = inference_onnx_model(net, image, input_size)
 
     if detections is not None:
-        plot_detections(detections, image, threshold=threshold, in_HW=input_size[::-1])
+        plot_detections(detections, image, threshold=threshold, in_size_WH=input_size)
     # show the output image
     cv2.imshow("output", image)
     cv2.waitKey(waitKey_val)
@@ -114,9 +114,13 @@ def main():
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')
     parser.add_argument("-is", "--input_size",
+                        nargs=2,
                         default=(640, 640),
                         help='Input images are resized to this size (width, height). (default: %(default)s).')
     args = parser.parse_args()
+    args.input_size = tuple(map(int, args.input_size))
+    # ensure input size is of correct mult
+    args.input_size = tuple(map(check_img_size, args.input_size))
     print("Current Arguments: ", args)
 
     net = load_net(args.model)

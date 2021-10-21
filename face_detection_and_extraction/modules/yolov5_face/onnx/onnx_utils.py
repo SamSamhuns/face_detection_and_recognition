@@ -34,7 +34,7 @@ def preprocess_image(cv2_image, input_size=(640, 640)):
     """
     cv2_image = cv2_image[..., ::-1]  # BGR2RGB
     # make sure img dims are divisible by model stride
-    in_w, in_h = check_img_size(input_size[0]), check_img_size(input_size[1])
+    in_w, in_h = tuple(map(check_img_size, input_size))
     pad_resized = pad_resize_image(cv2_image, (in_w, in_h))
     img = np.transpose(pad_resized, (2, 0, 1)).astype(np.float32)  # HWC -> CHW
     img /= 255.0

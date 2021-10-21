@@ -13,7 +13,7 @@ from datetime import datetime
 
 from modules.common_utils import get_argparse, fix_path_for_globbing
 from modules.common_utils import pad_resize_image, scale_coords
-from modules.yolov5_face.onnx.onnx_utils import preprocess_image, conv_strides_to_anchors, w_non_max_suppression
+from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
 
 mimetypes.init()
 today = datetime.today()
@@ -56,8 +56,10 @@ class Net(object):
         self.face_net = face_net
         self.inf_func = inf_func
         self.bbox_conf_func = bbox_conf_func
-        # (width, height)
-        self.FACE_MODEL_INPUT_SIZE = tuple(map(int, model_in_size))
+        # in_size = (width, height), conv to int
+        model_in_size = tuple(map(int, model_in_size))
+        # input size must be multiple of max stride 32 for yolov5 models
+        self.FACE_MODEL_INPUT_SIZE = tuple(map(check_img_size, model_in_size))
         # only for cv2 models
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
         # (width, height), size the detected faces are resized

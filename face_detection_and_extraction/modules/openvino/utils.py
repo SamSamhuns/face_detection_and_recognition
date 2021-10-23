@@ -7,7 +7,7 @@ class OVNetwork(object):
     __slots__ = ["OVExec", "in_layer", "out_layer",
                  "in_shape", "out_shape"]
 
-    def __init__(self, bin_path, xml_path, device="CPU"):
+    def __init__(self, xml_path, bin_path, device="CPU"):
         OVIE = IECore()
         OVNet = OVIE.read_network(model=xml_path, weights=bin_path)
         self.OVExec = OVIE.load_network(network=OVNet, device_name=device)

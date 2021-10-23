@@ -1,50 +1,10 @@
-from openvino.inference_engine import IECore
 import numpy as np
 import cv2
 import os
 
 from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import pad_resize_image, scale_coords
-
-
-class OVNetwork(object):
-
-    __slots__ = ["OVExec", "OBJECT_DET_LABELS", "input_layer",
-                 "output_layer", "input_shape", "output_shape"]
-
-    def __init__(self, model_bin_path, model_xml_path, device="CPU"):
-        OVIE = IECore()
-        # load openVINO network
-        OVNet = OVIE.read_network(
-            model=model_xml_path, weights=model_bin_path)
-        # create executable network
-        self.OVExec = OVIE.load_network(
-            network=OVNet, device_name=device)
-        # dummy labels
-        self.OBJECT_DET_LABELS = {i: "Object" for i in range(1000)}
-
-        # get input/output layer information
-        self.input_layer = next(iter(OVNet.input_info))
-        self.output_layer = next(iter(OVNet.outputs))
-        self.input_shape = OVNet.input_info[self.input_layer].input_data.shape
-        self.output_shape = OVNet.outputs[self.output_layer].shape
-
-        # print model input/output info and shapes
-        print("Available Devices: ", OVIE.available_devices)
-        print("Input Layer: ", self.input_layer)
-        print("Output Layer: ", self.output_layer)
-        print("Input Shape: ", self.input_shape)
-        print("Output Shape: ", self.output_shape)
-
-
-def inference_model(net, cv2_img):
-    N, C, H, W = net.input_shape
-    resized = pad_resize_image(cv2_img, (W, H))  # padded resize
-    resized = resized.transpose((2, 0, 1))  # HWC to CHW
-    input_image = resized.reshape((N, C, H, W))
-    # openVINO expects BGR format
-    detections = net.OVExec.infer(inputs={net.input_layer: input_image})
-    return detections[net.output_layer]
+from modules.common_utils import scale_coords, draw_bbox_on_image
+from modules.openvino.utils import OVNetwork
 
 
 def inference_img(net, img, threshold, waitKey_val=0):
@@ -62,23 +22,17 @@ def inference_img(net, img, threshold, waitKey_val=0):
 
     h, w = image.shape[:2]
     # pass the image through the bnetwork obtain the detections
-    detections = inference_model(net, image)[0][0]
+    detections = net.inference_img(image)[0][0]
 
     # filter dtections below threshold
     detections = detections[detections[:, 2] > threshold]
     # rescale detections to orig image size taking the padding into account
-    N, C, H, W = net.input_shape
+    N, C, H, W = net.in_shape
     boxes = detections[:, 3:7] * np.array([W, H, W, H])
     boxes = scale_coords((H, W), boxes, (h, w)).round()
+    confs = detections[:, 2]
+    draw_bbox_on_image(image, boxes, confs)
 
-    for i, box in enumerate(boxes):
-        xmin, ymin, xmax, ymax = box.astype('int')
-        cv2.rectangle(image, (xmin, ymin),
-                      (xmax, ymax), (0, 125, 255), 3)
-        text = f'label:{int(detections[i, 1])}, conf:{detections[i, 2]:.2f}'
-        cv2.putText(image, text, (xmin, ymin - 7),
-                    cv2.FONT_HERSHEY_PLAIN, 0.8, (0, 125, 255), 1)
-    # print(f"Num of faces detected = {i} ")
     cv2.imshow("openvino", image)
     cv2.waitKey(waitKey_val)
 
@@ -112,7 +66,7 @@ def main():
                         help="Path to openVINO model XML file. (default: %(default)s)")
     args = parser.parse_args()
 
-    net = OVNetwork(args.model_bin_path, args.model_xml_path, device="CPU")
+    net = OVNetwork(args.model_xml_path, args.model_bin_path, device="CPU")
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":

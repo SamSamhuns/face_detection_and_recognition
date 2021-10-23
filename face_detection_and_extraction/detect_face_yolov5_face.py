@@ -4,7 +4,7 @@ import cv2
 import os
 
 from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import scale_coords
+from modules.common_utils import scale_coords, draw_bbox_on_image
 
 from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
 
@@ -26,31 +26,17 @@ def load_net(model):
     return net
 
 
-def plot_detections(detections, cv2_img, threshold, in_size_WH, line_thickness=None):
-    # plot detections on cv2_img
-
+def plot_detections(detections, cv2_img, threshold, in_size_WH):
     # filter detections below threshold
     detections = detections[detections[..., 4] > threshold]
-    boxs = detections[..., :4].numpy()
+    boxes = detections[..., :4].numpy()
     confs = detections[..., 4].numpy()
 
     mw, mh = in_size_WH
     h, w = cv2_img.shape[:2]
     # rescale detections to orig image size taking the padding into account
-    boxs = scale_coords((mh, mw), boxs, (h, w)).round()
-    tl = line_thickness or round(0.002 * (w + h) / 2) + 1
-    for i, box in enumerate(boxs):
-        x1, y1, x2, y2 = map(int, box)
-        cv2.rectangle(cv2_img, (x1, y1), (x2, y2), (0, 0, 255), thickness=max(
-            int((w + h) / 600), 1), lineType=cv2.LINE_AA)
-        label = f"{confs[i]:.2f}"
-        t_size = cv2.getTextSize(
-            label, 0, fontScale=tl / 3, thickness=1)[0]
-        c2 = x1 + t_size[0] + 3, y1 - t_size[1] - 5
-        cv2.rectangle(cv2_img, (x1 - 1, y1), c2,
-                      (0, 0, 255), cv2.FILLED, cv2.LINE_AA)
-        cv2.putText(cv2_img, label, (x1 + 3, y1 - 4), 0, tl / 3, [255, 255, 255],
-                    thickness=1, lineType=cv2.LINE_AA)
+    boxes = scale_coords((mh, mw), boxes, (h, w)).round()
+    draw_bbox_on_image(cv2_img, boxes, confs)
     return cv2_img
 
 
@@ -78,11 +64,10 @@ def inference_img(net, img, input_size, threshold, waitKey_val=0):
 
     # pass the image through the network and get detections
     detections = inference_onnx_model(net, image, input_size)
-
     if detections is not None:
         plot_detections(detections, image, threshold=threshold, in_size_WH=input_size)
-    # show the output image
-    cv2.imshow("output", image)
+
+    cv2.imshow("YOLOv5 face", image)
     cv2.waitKey(waitKey_val)
 
 
@@ -96,8 +81,6 @@ def inference_vid(net, vid, input_size, threshold):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
-
-    # When everything done, release the capture
     cap.release()
     cv2.destroyAllWindows()
 

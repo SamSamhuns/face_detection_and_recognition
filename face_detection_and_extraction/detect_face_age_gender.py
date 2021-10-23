@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import pad_resize_image, scale_coords
+from modules.common_utils import pad_resize_image, scale_coords, draw_bbox_on_image
 
 
 class Net(object):
@@ -78,13 +78,9 @@ def inference_and_get_face_boxes(net, cv2_img, threshold=0.7):
     # rescale detections to orig image size taking the padding into account
     boxes = detections[:, 3:7] * np.array([nw, nh, nw, nh])
     boxes = scale_coords((nh, nw), boxes, (h, w)).round()
-    bboxes = []
-    for i, box in enumerate(boxes):
-        xmin, ymin, xmax, ymax = box.astype('int')
-        bboxes.append([xmin, ymin, xmax, ymax])
-        cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax),
-                      (0, 0, 255), int(round(fh / 150)), 8)
-    return cv2_img, bboxes
+    confs = detections[:, 2]
+    draw_bbox_on_image(cv2_img, boxes, confs)
+    return cv2_img, boxes
 
 
 def inference_img(net, img, threshold, waitKey_val=0):
@@ -106,10 +102,12 @@ def inference_img(net, img, threshold, waitKey_val=0):
     padding = 20
     for bbox in face_bboxes:
         # take face crop from face_net detections
+        bbox = list(map(int, bbox))
         face = image[max(0, bbox[1] - padding):min(bbox[3] + padding, image.shape[0] - 1),
                      max(0, bbox[0] - padding):min(bbox[2] + padding, image.shape[1] - 1)]
         face_blob = cv2.dnn.blobFromImage(
             face, 1.0, net.AGE_GENDER_INPUT_SIZE, net.AGE_GENDER_MODEL_MEAN_VALUES, swapRB=False)
+
         # estimate gender
         net.gender_net.setInput(face_blob)
         gender_preds = net.gender_net.forward()
@@ -140,8 +138,6 @@ def inference_vid(net, vid, threshold):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
-
-    # When everything done, release the capture
     cap.release()
     cv2.destroyAllWindows()
 

@@ -105,14 +105,11 @@ def inference_vid(net, runtime, back_model, vid, threshold):
     ret, frame = cap.read()
 
     while ret:
-        # inference and display the resulting frame
         inference_img(net, runtime, back_model,
                       frame, threshold, waitKey_val=5)
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
-
-    # When everything done, release the capture
     cap.release()
     cv2.destroyAllWindows()
 

@@ -3,7 +3,7 @@ import cv2
 import os
 
 from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import pad_resize_image, scale_coords
+from modules.common_utils import pad_resize_image, scale_coords, draw_bbox_on_image
 
 
 class Net(object):
@@ -75,14 +75,9 @@ def inference_img(net, img, threshold, waitKey_val=0):
     # rescale detections to orig image size taking the padding into account
     boxes = detections[:, 3:7] * np.array([nw, nh, nw, nh])
     boxes = scale_coords((nh, nw), boxes, (h, w)).round()
+    confs = detections[:, 2]
+    draw_bbox_on_image(image, boxes, confs)
 
-    for i, box in enumerate(boxes):
-        xmin, ymin, xmax, ymax = box.astype('int')
-        cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 125, 255), 3)
-        text = f'label:{int(detections[i, 1])}, conf:{detections[i, 2]:.2f}'
-        cv2.putText(image, text, (xmin, ymin - 7),
-                    cv2.FONT_HERSHEY_PLAIN, 0.8, (0, 125, 255), 1)
-    # print(f"Num of faces detected = {i} ")
     cv2.imshow("opencv_dnn", image)
     cv2.waitKey(waitKey_val)
 

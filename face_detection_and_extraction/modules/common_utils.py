@@ -58,7 +58,7 @@ def get_argparse(*args, **kwargs):
                         default="weights/face-detection-caffe/deploy.prototxt.txt",
                         help="Path to 'deploy' prototxt file. (default: %(default)s)")
     parser.add_argument("-t", "--threshold",
-                        type=float, default=0.5,
+                        type=float, default=0.7,
                         help='score to filter weak detections. (default: %(default)s)')
 
     return parser
@@ -199,3 +199,28 @@ def calculate_bbox_iou(bbox1, bbox2):
     iou = intersect / (((x1max - x1min) * (y1max - y1min)) +
                        ((x2max - x2min) * (y2max - y2min)) - intersect)
     return iou
+
+
+def draw_bbox_on_image(cv2_img, boxes, confs):
+    """
+    Draw bboxes on cv2 image
+        boxes must be 2D list/np array of coords xmin, ymin, xmax, ymax foreach bbox
+        confs must be 2D list of confidences foreach corresponding bbox
+    """
+    h, w = cv2_img.shape[:2]
+    tl = round(0.002 * (w + h) / 2) + 1
+
+    for i, box in enumerate(boxes):
+        label = f"{confs[i]:.2f}"
+        # draw bbox on image
+        xmin, ymin, xmax, ymax = map(int, box)
+        cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=max(
+            int((w + h) / 600), 1), lineType=cv2.LINE_AA)
+        t_size = cv2.getTextSize(
+            label, 0, fontScale=tl / 3, thickness=1)[0]
+        # draw label text along with text bg rect
+        c2 = xmin + t_size[0] + 3, ymin - t_size[1] - 5
+        cv2.rectangle(cv2_img, (xmin - 1, ymin), c2,
+                      (0, 0, 255), cv2.FILLED, cv2.LINE_AA)
+        cv2.putText(cv2_img, label, (xmin + 3, ymin - 4), 0, tl / 3, [255, 255, 255],
+                    thickness=1, lineType=cv2.LINE_AA)

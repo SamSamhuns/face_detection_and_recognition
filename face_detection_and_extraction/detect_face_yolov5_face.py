@@ -6,7 +6,8 @@ import os
 from modules.common_utils import get_argparse, get_file_type
 from modules.common_utils import scale_coords, draw_bbox_on_image
 
-from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
+from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image
+from modules.yolov5_face.onnx.onnx_utils import conv_strides_to_anchors, non_max_suppression, w_non_max_suppression
 
 
 def load_net(model):
@@ -40,12 +41,18 @@ def plot_detections(detections, cv2_img, threshold, in_size_WH):
     return cv2_img
 
 
-def inference_onnx_model(net, cv2_img, input_size):
+def inference_onnx_model(net, cv2_img, input_size, official=False):
     img = preprocess_image(cv2_img, input_size=input_size)
     outputs = net.run(None, {"images": img})
-    outputx = conv_strides_to_anchors(outputs, "cpu")
-    detections = w_non_max_suppression(
-        outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
+
+    if official:  # for official yolov5 models
+        detections = torch.from_numpy(np.array(outputs[0]))
+        detections = non_max_suppression(
+            detections, conf_thres=0.4, iou_thres=0.5, agnostic=False)
+    else:         # for yolov5-face models
+        outputx = conv_strides_to_anchors(outputs, "cpu")
+        detections = w_non_max_suppression(
+            outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
     return detections[0]
 
 

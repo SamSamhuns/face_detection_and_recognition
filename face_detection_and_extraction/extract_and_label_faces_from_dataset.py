@@ -4,6 +4,7 @@
 import os
 import cv2
 import glob
+import torch
 import logging
 import onnxruntime
 import numpy as np
@@ -13,7 +14,8 @@ from datetime import datetime
 from modules.common_utils import scale_coords
 from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
 from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
-from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
+from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image
+from modules.yolov5_face.onnx.onnx_utils import conv_strides_to_anchors, non_max_suppression, w_non_max_suppression
 from modules.openvino.utils import OVNetwork
 
 today = datetime.today()
@@ -169,12 +171,18 @@ def load_net(model, feat_net_type="FACE_REID_MNV3", model_in_size=(300, 300), mo
     return Net(face_net, feat_net_type, inf_func, bbox_conf_func, model_in_size, model_out_size)
 
 
-def inference_yolov5_onnx_model(net, cv2_img, input_size):
+def inference_yolov5_onnx_model(net, cv2_img, input_size, official=False):
     resized = preprocess_image(cv2_img, input_size=input_size)
     outputs = net.face_net.run(None, {"images": resized})
-    outputx = conv_strides_to_anchors(outputs, "cpu")
-    detections = w_non_max_suppression(
-        outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
+
+    if official:  # for official yolov5 models
+        detections = torch.from_numpy(np.array(outputs[0]))
+        detections = non_max_suppression(
+            detections, conf_thres=0.4, iou_thres=0.5, agnostic=False)
+    else:         # for yolov5-face models
+        outputx = conv_strides_to_anchors(outputs, "cpu")
+        detections = w_non_max_suppression(
+            outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
     return detections[0]
 
 

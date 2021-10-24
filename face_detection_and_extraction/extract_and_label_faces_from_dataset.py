@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
-from modules.common_utils import pad_resize_image, scale_coords
+from modules.common_utils import scale_coords
 from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
 from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
 from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
@@ -145,23 +145,18 @@ class Net(object):
         """
         Get face features with face re-identification MobileNet-V2 model
         """
-        print(face.shape)
         feats = self.feature_net.inference_img(
             face, preprocess_func=cv2.resize)
         return feats[0].squeeze(axis=-1).squeeze(axis=-1)
 
 
-def load_net(model, prototxt, feat_net_type="FACE_REID_MNV3", model_in_size=(300, 300), model_out_size=(112, 112), device="cpu"):
+def load_net(model, feat_net_type="FACE_REID_MNV3", model_in_size=(300, 300), model_out_size=(112, 112), device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
 
     fname, fext = os.path.splitext(model)
-    if fext == ".caffemodel":
-        face_net = cv2.dnn.readNetFromCaffe(prototxt, model)
-    elif fext == ".pb":
-        face_net = cv2.dnn.readNetFromTensorflow(model, prototxt)
-    elif fext == ".onnx":
+    if fext == ".onnx":
         face_net = onnxruntime.InferenceSession(model)  # ignores prototxt
     else:
         raise NotImplementedError(
@@ -170,29 +165,8 @@ def load_net(model, prototxt, feat_net_type="FACE_REID_MNV3", model_in_size=(300
     if fext == ".onnx":
         inf_func = inference_yolov5_onnx_model
         bbox_conf_func = get_bboxes_and_confs_from_yolov5_dets
-    else:
-        if device == "cpu":
-            face_net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
-            print("Using CPU device")
-        elif device == "gpu":
-            face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-            face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-            print("Using GPU device")
-        inf_func = inference_cv2_model
-        bbox_conf_func = get_bboxes_and_confs_from_cv2_dets
 
     return Net(face_net, feat_net_type, inf_func, bbox_conf_func, model_in_size, model_out_size)
-
-
-def inference_cv2_model(net, cv2_img, input_size):
-    resized = pad_resize_image(cv2_img, input_size=input_size)
-    # opencv expects BGR format
-    blob = cv2.dnn.blobFromImage(resized, 1.0,
-                                 net.FACE_MODEL_INPUT_SIZE,
-                                 net.FACE_MODEL_MEAN_VALUES)
-    net.face_net.setInput(blob)
-    detections = net.face_net.forward()
-    return detections[0][0]
 
 
 def inference_yolov5_onnx_model(net, cv2_img, input_size):
@@ -204,22 +178,6 @@ def inference_yolov5_onnx_model(net, cv2_img, input_size):
     return detections[0]
 
 
-def get_bboxes_and_confs_from_cv2_dets(detections, threshold, orig_size, in_size):
-    """
-    Returns a tuple of bounding boxes and confidence scores
-    """
-    w, h = orig_size
-    iw, ih = in_size
-    # filter detections below threshold
-    detections = detections[detections[:, 2] > threshold]
-    confs = detections[:, 2]
-    # rescale detections to orig image size taking the padding into account
-    boxes = detections[:, 3:7] * np.array([iw, ih, iw, ih])
-    boxes = scale_coords((ih, iw), boxes, (h, w)).round()
-
-    return boxes, confs
-
-
 def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_size):
     """
     Returns a tuple of bounding boxes and confidence scores
@@ -228,6 +186,13 @@ def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_s
     iw, ih = in_size
     # filter detections below threshold
     detections = detections[detections[..., 4] > threshold]
+    # only select bboxes with area greater than 0.15% of total area of frame
+    total_area = iw * ih
+    bbox_area = ((detections[:, 2] - detections[:, 0])
+                 * (detections[:, 3] - detections[:, 1]))
+    bbox_area_perc = 100 * bbox_area / total_area
+    detections = detections[bbox_area_perc > 0.15]
+
     confs = detections[..., 4].numpy()
     # rescale detections to orig image size taking the padding into account
     boxes = detections[..., :4].numpy()
@@ -423,6 +388,9 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
                 # save faces from videos inside sub dirs if flag is set
                 if SAVE_VIDEO_FACES_IN_SUBDIRS:
                     faces_save_dir = os.path.join(faces_save_dir, media_root)
+                    if os.path.exists(faces_save_dir):  # skip pre-extracted faces
+                        print(f"Skipping {faces_save_dir} as it already exists.")
+                        continue
                     os.makedirs(faces_save_dir, exist_ok=True)
 
                 cap = cv2.VideoCapture(media_path)
@@ -464,7 +432,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
 
 def main():
     parser = get_argparse(description="Dataset face extraction")
-    parser.remove_argument("input_src")
+    parser.remove_arguments(["input_src", "prototxt"])
     parser.add_argument('-rd', '--raw_datadir_path',
                         type=str, required=True,
                         help="""Raw dataset dir path with
@@ -491,7 +459,6 @@ def main():
     print("Current Arguments: ", args)
 
     net = load_net(args.model,
-                   args.prototxt,
                    model_in_size=args.input_size,
                    model_out_size=args.output_size,
                    device=args.device)

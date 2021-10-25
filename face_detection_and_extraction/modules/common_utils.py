@@ -1,8 +1,10 @@
+# common utils should not import from other custom packages
+import math
 import argparse
+import mimetypes
 from typing import List
 
 import cv2
-import mimetypes
 import numpy as np
 
 
@@ -39,6 +41,9 @@ class ArgumentParserMod(argparse.ArgumentParser):
         [self.remove_argument(arg) for arg in arg_list]
 
 
+# #################### file path based utils ####################### #
+
+
 def get_argparse(*args, **kwargs):
     """
     get base argparse arguments
@@ -62,7 +67,7 @@ def get_argparse(*args, **kwargs):
                         help='score to filter weak detections. (default: %(default)s)')
     parser.add_argument("-at", "--bbox_area_thres",
                         type=float, default=0.15,
-                        help='score to filter bboxes that cover small area %. (default: %(default)s)')
+                        help='score to filter bboxes that cover small area perc. (default: %(default)s)')
 
     return parser
 
@@ -96,30 +101,25 @@ def get_file_type(file_src):
     return file_type
 
 
-def get_distinct_rgb_color(index):
-    """
-    Get a RGB color from a pre-defined colors list
-    """
-    color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
-                  (255, 0, 255),  (0, 255, 255), (0, 0, 0), (128, 0, 0),
-                  (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128),
-                  (0, 128, 128), (128, 128, 128), (192, 0, 0), (0, 192, 0),
-                  (0, 0, 192), (192, 192, 0), (192, 0, 192), (0, 192, 192),
-                  (192, 192, 192), (64, 0, 0), (0, 64, 0), (0, 0, 64),
-                  (64, 64, 0), (64, 0, 64), (0, 64, 64), (64, 64, 64),
-                  (32, 0, 0), (0, 32, 0), (0, 0, 32), (32, 32, 0),
-                  (32, 0, 32), (0, 32, 32), (32, 32, 32), (96, 0, 0),
-                  (0, 96, 0), (0, 0, 96), (96, 96, 0), (96, 0, 96), (0, 96, 96),
-                  (96, 96, 96), (160, 0, 0), (0, 160, 0), (0, 0, 160),
-                  (160, 160, 0), (160, 0, 160), (0, 160, 160), (160, 160, 160),
-                  (224, 0, 0), (0, 224, 0), (0, 0, 224), (224, 224, 0),
-                  (224, 0, 224), (0, 224, 224), (224, 224, 224)]
-    if index >= len(color_list):
-        print(
-            f"WARNING:color index {index} exceeds available number of colors {len(color_list)}. Cycling colors now")
-        index %= len(color_list)
+# ##################### image size/coords utils ######################## #
 
-    return color_list[index]
+def make_divisible(x, divisor):
+    """
+    Returns x evenly divisible by divisor
+    """
+    return math.ceil(x / divisor) * divisor
+
+
+def check_img_size(img_size, s=32):
+    """
+    Verify img_size is a multiple of stride s
+    s = max stride, check with model.stride.max()
+    """
+    new_size = make_divisible(img_size, int(s))  # ceil gs-multiple
+    if new_size != img_size:
+        print('WARNING: --img-size %g must be multiple of max stride %g, updating to %g' %
+              (img_size, s, new_size))
+    return new_size
 
 
 def pad_resize_image(cv2_img, new_size=(640, 480), color=(125, 125, 125)) -> np.ndarray:
@@ -182,6 +182,9 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     return coords
 
 
+# ##################### bouding box utils ######################### #
+
+
 def calculate_bbox_iou(bbox1, bbox2):
     """
     bboxes must have coords in fmt (xmin, ymin, xmax, ymax)
@@ -227,3 +230,29 @@ def draw_bbox_on_image(cv2_img, boxes, confs):
                       (0, 0, 255), cv2.FILLED, cv2.LINE_AA)
         cv2.putText(cv2_img, label, (xmin + 3, ymin - 4), 0, tl / 3, [255, 255, 255],
                     thickness=1, lineType=cv2.LINE_AA)
+
+
+def get_distinct_rgb_color(index):
+    """
+    Get a RGB color from a pre-defined colors list
+    """
+    color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
+                  (255, 0, 255),  (0, 255, 255), (0, 0, 0), (128, 0, 0),
+                  (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128),
+                  (0, 128, 128), (128, 128, 128), (192, 0, 0), (0, 192, 0),
+                  (0, 0, 192), (192, 192, 0), (192, 0, 192), (0, 192, 192),
+                  (192, 192, 192), (64, 0, 0), (0, 64, 0), (0, 0, 64),
+                  (64, 64, 0), (64, 0, 64), (0, 64, 64), (64, 64, 64),
+                  (32, 0, 0), (0, 32, 0), (0, 0, 32), (32, 32, 0),
+                  (32, 0, 32), (0, 32, 32), (32, 32, 32), (96, 0, 0),
+                  (0, 96, 0), (0, 0, 96), (96, 96, 0), (96, 0, 96), (0, 96, 96),
+                  (96, 96, 96), (160, 0, 0), (0, 160, 0), (0, 0, 160),
+                  (160, 160, 0), (160, 0, 160), (0, 160, 160), (160, 160, 160),
+                  (224, 0, 0), (0, 224, 0), (0, 0, 224), (224, 224, 0),
+                  (224, 0, 224), (0, 224, 224), (224, 224, 224)]
+    if index >= len(color_list):
+        print(
+            f"WARNING:color index {index} exceeds available number of colors {len(color_list)}. Cycling colors now")
+        index %= len(color_list)
+
+    return color_list[index]

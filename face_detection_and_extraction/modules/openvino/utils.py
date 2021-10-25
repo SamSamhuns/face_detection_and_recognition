@@ -5,12 +5,15 @@ from openvino.inference_engine import IECore
 class OVNetwork(object):
 
     __slots__ = ["OVExec", "in_layer", "out_layer",
-                 "in_shape", "out_shape"]
+                 "det_thres", "bbox_area_thres", "in_shape", "out_shape"]
 
-    def __init__(self, xml_path, bin_path, device="CPU"):
+    def __init__(self, xml_path, bin_path, det_thres, bbox_area_thres, device="CPU"):
         OVIE = IECore()
         OVNet = OVIE.read_network(model=xml_path, weights=bin_path)
         self.OVExec = OVIE.load_network(network=OVNet, device_name=device)
+
+        self.det_thres = det_thres
+        self.bbox_area_thres = bbox_area_thres
 
         # get input/output layer information
         self.in_layer = next(iter(OVNet.input_info))

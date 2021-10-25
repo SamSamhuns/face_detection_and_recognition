@@ -5,6 +5,7 @@ import os
 import cv2
 import glob
 import torch
+import pickle
 import logging
 import onnxruntime
 import numpy as np
@@ -27,11 +28,15 @@ logging.basicConfig(filename=f'logs/extraction_and_label_statistics_{year}{month
 
 # ######################## Settings ##################################
 
+ROOT_URL = "https://example/"
+CV2_DISP_WAIT_MS = 100
+# X & Y displacements for cv2 window
+CV2_DISP_LOC_X = 600
+CV2_DISP_LOC_Y = 50
 SAVE_VIDEO_FACES_IN_SUBDIRS = True
 MAX_N_FRAME_FROM_VID = 200  # max number of frames from which faces are extracted
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
                    'mp4', 'avi'}
-
 
 # #################### Raw Data Organization #########################
 #        dataset
@@ -51,19 +56,23 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
 
 
 class Net(object):
-    __slots__ = ["face_net", "inf_func", "feature_net", "bbox_conf_func",
+    __slots__ = ["face_net", "feature_net",
+                 "inf_func", "bbox_conf_func",
+                 "det_thres", "bbox_area_thres",
                  "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE",
                  "feat_net_type", "face_feat_bbox_age_gender_list",
-                 "normal_thres", "harsh_thres", "use_bbox_iou", "max_faceid",
-                 "anti_spoof"]
+                 "normal_thres", "harsh_thres", "use_bbox_iou", "max_faceid"]
 
     def __init__(self, face_net, feat_net_type,
                  inf_func, bbox_conf_func,
+                 det_thres, bbox_area_thres,
                  model_in_size=(640, 640), model_out_size=None,
                  use_bbox_iou_to_track_face=True):
         self.face_net = face_net
         self.inf_func = inf_func
         self.bbox_conf_func = bbox_conf_func
+        self.det_thres = det_thres
+        self.bbox_area_thres = bbox_area_thres
         # in_size = (width, height), conv to int
         model_in_size = tuple(map(int, model_in_size))
         # input size must be multiple of max stride 32 for yolov5 models
@@ -117,7 +126,7 @@ class Net(object):
             [self.max_faceid, feat, bbox, age, gender])
 
     def clear_faces(self):
-        print("Clearing existing faces")
+        print("Clearing existing faces from face tracker.")
         self.max_faceid = 0
         self.face_feat_bbox_age_gender_list = []
 
@@ -152,7 +161,23 @@ class Net(object):
         return feats[0].squeeze(axis=-1).squeeze(axis=-1)
 
 
-def load_net(model, feat_net_type="FACE_REID_MNV3", model_in_size=(300, 300), model_out_size=(112, 112), device="cpu"):
+class FrameFacesObj(object):
+
+    __slots__ = ["faces", "ids", "frame_num", "time_sec",
+                 "bboxes", "confs", "ages", "genders"]
+
+    def __init__(self, faces, ids, frame_num, time_sec, bboxes, confs, ages, genders):
+        self.faces, self.ids = faces, ids
+        self.frame_num, self.time_sec = frame_num, time_sec
+        self.bboxes, self.confs = bboxes, confs
+        self.ages, self.genders = ages, genders
+
+    @property
+    def __dict__(self):
+        return {s: getattr(self, s) for s in self.__slots__ if hasattr(self, s)}
+
+
+def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, model_out_size, device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -168,7 +193,8 @@ def load_net(model, feat_net_type="FACE_REID_MNV3", model_in_size=(300, 300), mo
         inf_func = inference_yolov5_onnx_model
         bbox_conf_func = get_bboxes_and_confs_from_yolov5_dets
 
-    return Net(face_net, feat_net_type, inf_func, bbox_conf_func, model_in_size, model_out_size)
+    return Net(face_net, feat_net_type, inf_func, bbox_conf_func,
+               det_thres, bbox_area_thres, model_in_size, model_out_size)
 
 
 def inference_yolov5_onnx_model(net, cv2_img, input_size, official=False):
@@ -186,20 +212,20 @@ def inference_yolov5_onnx_model(net, cv2_img, input_size, official=False):
     return detections[0]
 
 
-def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_size):
+def get_bboxes_and_confs_from_yolov5_dets(detections, det_thres, bbox_area_thres, orig_size, in_size):
     """
     Returns a tuple of bounding boxes and confidence scores
     """
     w, h = orig_size
     iw, ih = in_size
     # filter detections below threshold
-    detections = detections[detections[..., 4] > threshold]
+    detections = detections[detections[..., 4] > det_thres]
     # only select bboxes with area greater than 0.15% of total area of frame
     total_area = iw * ih
     bbox_area = ((detections[:, 2] - detections[:, 0])
                  * (detections[:, 3] - detections[:, 1]))
     bbox_area_perc = 100 * bbox_area / total_area
-    detections = detections[bbox_area_perc > 0.15]
+    detections = detections[bbox_area_perc > bbox_area_thres]
 
     confs = detections[..., 4].numpy()
     # rescale detections to orig image size taking the padding into account
@@ -222,7 +248,7 @@ def get_age_and_gender_with_cv2_waitKey(image):
     cv2.putText(image_gender, gender_label, (5, h - 5), 0, tl / 2, [0, 0, 255],
                 thickness=2, lineType=cv2.LINE_AA)
     cv2.imshow("Face Detection", image_gender)
-    cv2.moveWindow('Face Detection', 500, 100)
+    cv2.moveWindow('Face Detection', CV2_DISP_LOC_X, CV2_DISP_LOC_Y)
     while True:
         key = cv2.waitKey(-1)
         if key == 119:       # w pressed for male
@@ -243,7 +269,7 @@ def get_age_and_gender_with_cv2_waitKey(image):
     cv2.putText(image_age, age_label2, (5, h - 5), 0, tl / 3, [0, 0, 255],
                 thickness=2, lineType=cv2.LINE_AA)
     cv2.imshow("Face Detection", image_age)
-    cv2.moveWindow('Face Detection', 500, 100)
+    cv2.moveWindow('Face Detection', CV2_DISP_LOC_X, CV2_DISP_LOC_Y)
     while True:
         key = cv2.waitKey(-1)
         if 49 <= key <= 53:  # 1, 2, 3, 4, or 5 pressed for age groups
@@ -252,8 +278,8 @@ def get_age_and_gender_with_cv2_waitKey(image):
     return age, gender
 
 
-def extract_face_and_conf_list(net, img, threshold=0.5):
-    """returns a tuple of two lists: cv2 images containing faces, conf of said face dets
+def extract_face_img_id_bbox_conf_age_gender_list(net, img):
+    """returns a tuple of six lists: cv2 face images, ids, bounding boxes, confidences, ages, & genders
     """
     if isinstance(img, str):
         orig_image = cv2.imread(img)
@@ -262,15 +288,15 @@ def extract_face_and_conf_list(net, img, threshold=0.5):
 
     h, w = orig_image.shape[:2]
     iw, ih = net.FACE_MODEL_INPUT_SIZE
-    faces, faceids, confs, ages, genders = [], [], [], [], []
+    faces, bboxes, faceids, confs, ages, genders = [], [], [], [], [], []
 
     # pass the blob through the network to get raw detections
     detections = net.inf_func(net, orig_image, net.FACE_MODEL_INPUT_SIZE)
     if detections is None:  # no faces detected
-        return faces, faceids, confs, ages, genders
+        return faces, faceids, bboxes, confs, ages, genders
     # obtain bounding boxesx and conf scores
     boxes, confs = net.bbox_conf_func(
-        detections, threshold, orig_size=(w, h), in_size=(iw, ih))
+        detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
     tx, ty = -10, -1
     bx, by = 10, 5
 
@@ -285,6 +311,7 @@ def extract_face_and_conf_list(net, img, threshold=0.5):
         # crop face, image[ty:by, tx:bx], image[y:yh, x:xw]
         x, y, xw, yh = xmin + tx, ymin + ty, xmax + bx, ymax + by
         x, y, xw, yh = max(x, 0), max(y, 0), min(xw, w), min(yh, h)
+        bboxes.append([x, y, xw, yh])
 
         # .copy() only keeps crops in memory
         face = image[y:yh, x:xw].copy()
@@ -293,7 +320,7 @@ def extract_face_and_conf_list(net, img, threshold=0.5):
         faces.append(face)
 
         # extract face features for tracking
-        waitKey_value = 500
+        waitKey_value = CV2_DISP_WAIT_MS
         face_feat = net.get_face_features(face.copy())
 
         exists, faceid, age, gender = net.check_if_face_exists(
@@ -316,7 +343,7 @@ def extract_face_and_conf_list(net, img, threshold=0.5):
         if exists:
             # display image with detections
             cv2.imshow("Face Detection", image)
-            cv2.moveWindow('Face Detection', 500, 100)
+            cv2.moveWindow('Face Detection', CV2_DISP_LOC_X, CV2_DISP_LOC_Y)
             print("Existing face recognized. Using existing age and gender")
         else:
             # display image with detections and instructions for entering age and gender
@@ -328,44 +355,60 @@ def extract_face_and_conf_list(net, img, threshold=0.5):
         genders.append(gender)
         cv2.waitKey(waitKey_value)
 
-    return faces, faceids, confs, ages, genders
+    return faces, faceids, bboxes, confs, ages, genders
 
 
-def save_extracted_faces(prefix_name_list, face_list, id_list, conf_list, age_list, gender_list, save_dir) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
     """
+    Save extracted faces for one image or one video
     args:
-        media_prefix_name_list
-        face_list: list of cropped faces as np.ndarray
-        conf_list: list of confidence score for each corresponding face
-        age_list: list of age groups for each corresponding face
-        gender_list: list of gender for each corresponding face
+        frames_faces_obj_list: list of FrameFacesObj for each frame
+        media_root: root name of media file
         save_dir: dir where face imgs are saved in class dirs
     """
+    annot_dict = {"media_id": media_root, "frames_info": []}
     total = 0
-    for prefix, faces, ids, confs, ages, genders in zip(prefix_name_list, face_list, id_list, conf_list, age_list, gender_list):
+    for img in frames_faces_obj_list:  # for each frame
+        frame_num = img.frame_num
+        time_sec = img.time_sec
+        prefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
+        faces, ids, bboxes, confs, ages, genders = (
+            img.faces, img.ids, img.bboxes, img.confs, img.ages, img.genders)
+
+        single_frame_info = {"frame_num": frame_num, "time_sec": time_sec,
+                             "face_ids": ids, "face_bboxes": bboxes, "confs": confs,
+                             "ages": ages, "genders": genders}
+        annot_dict["frames_info"].append(single_frame_info)
         i = 0
         # for each detected face
-        for face, id, conf, age, gender in zip(faces, ids, confs, ages, genders):
+        for face, id, bbox, conf, age, gender in zip(faces, ids, bboxes, confs, ages, genders):
             i += 1
             conf = str(round(conf, 3)).replace('.', '_')
-            fname = f"{prefix}_face_{i}_conf_{conf}_{gender}_{age}_id_{id}.jpg"
-            cv2.imwrite(
-                f"{save_dir}/{fname}", face)
+            fname = f"{prefix}_frame_{frame_num}_sec_{time_sec}_id_{id}_conf_{conf}_{gender}_{age}.jpg"
+            cv2.imwrite(f"{save_dir}/{fname}", face)
         total += i
+
+    target_dir = save_dir.split('/')[0]
+    class_name = save_dir.split('/')[1]
+    pkl_fpath = os.path.join(target_dir, class_name, media_root + ".pkl")
+    with open(pkl_fpath, 'wb') as fptr:
+        annot_dict["class_name"] = class_name
+        annot_dict["media_url"] = ROOT_URL + media_root
+        pickle.dump(annot_dict, fptr)
     return total
 
 
-def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
+def filter_faces_from_data(raw_img_dir, target_dir, net):
     os.makedirs(target_dir, exist_ok=True)
-    dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
+    class_dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
 
     # for each class in raw data
-    for i in tqdm(range(len(dir_list))):
-        dir = dir_list[i]                # get path to class dir
-        if not os.path.isdir(dir):       # skip if path is not a dir
+    for i in tqdm(range(len(class_dir_list))):
+        class_dir = class_dir_list[i]          # get path to class dir
+        if not os.path.isdir(class_dir):       # skip if path is not a dir
             continue
-        class_name = dir.split("/")[-1]  # get class name
-        file_path_list = [file for file in glob.glob(dir + "/*")
+        class_name = class_dir.split("/")[-1]
+        file_path_list = [file for file in glob.glob(class_dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
         total_faces = 0
         # foreach image or video in file_path_list
@@ -374,66 +417,48 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
             faces_save_dir = os.path.join(target_dir, class_name)
             os.makedirs(faces_save_dir, exist_ok=True)
 
-            faces_img_list = []
-            faces_id_list = []
-            faces_conf_list = []
-            faces_age_list = []
-            faces_gender_list = []
-            media_prefix_name_list = []
+            frames_faces_obj_list = []
             media_root = os.path.basename(media_path).split('.')[0]
             mtype = get_file_type(media_path)
             if mtype == "image":
                 # Note: for images, face feature extraction and tracking is not implemented
-                media_prefix_name_list.append(media_root)
-                faces, faceids, confs, ages, genders = extract_face_and_conf_list(
-                    net, media_path, threshold)
-                faces_img_list.append(faces)
-                faces_id_list.append(faceids)
-                faces_conf_list.append(confs)
-                faces_age_list.append(ages)
-                faces_gender_list.append(genders)
+                faces, faceids, bboxes, confs, ages, genders = extract_face_img_id_bbox_conf_age_gender_list(
+                    net, media_path)
+                frames_faces_obj_list.append(FrameFacesObj(
+                    faces, faceids, 1, 1, bboxes, confs, ages, genders))
             elif mtype == "video":
                 # save faces from videos inside sub dirs if flag is set
                 if SAVE_VIDEO_FACES_IN_SUBDIRS:
                     faces_save_dir = os.path.join(faces_save_dir, media_root)
                     if os.path.exists(faces_save_dir):  # skip pre-extracted faces
-                        print(f"Skipping {faces_save_dir} as it already exists.")
+                        print(
+                            f"Skipping {faces_save_dir} as it already exists.")
                         continue
                     os.makedirs(faces_save_dir, exist_ok=True)
 
                 cap = cv2.VideoCapture(media_path)
+                # take 1 frame per sec
                 step = int(round(cap.get(cv2.CAP_PROP_FPS)))
-                i = 0
+                frame_num = 0
                 save_frames_num = 0
                 ret, frame = cap.read()
                 while ret:
-                    i += 1
-                    if i % step == 0 or i == 1:
+                    frame_num += 1
+                    if frame_num % step == 0 or frame_num == 1:
                         save_frames_num += 1
                         if save_frames_num > MAX_N_FRAME_FROM_VID:
                             break
-                        mprefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
-                        media_prefix_name_list.append(
-                            mprefix + f"sec_{i//step}_")
-                        faces, faceids, confs, ages, genders = extract_face_and_conf_list(
-                            net, frame, threshold)
-                        faces_img_list.append(faces)
-                        faces_id_list.append(faceids)
-                        faces_conf_list.append(confs)
-                        faces_age_list.append(ages)
-                        faces_gender_list.append(genders)
+                        faces, faceids, bboxes, confs, ages, genders = extract_face_img_id_bbox_conf_age_gender_list(
+                            net, frame)
+                        frames_faces_obj_list.append(FrameFacesObj(
+                            faces, faceids, frame_num, frame_num // step, bboxes, confs, ages, genders))
                     ret, frame = cap.read()
                 cap.release()
                 cv2.destroyAllWindows()
                 net.clear_faces()
 
-            faces_extracted = save_extracted_faces(media_prefix_name_list,
-                                                   faces_img_list,
-                                                   faces_id_list,
-                                                   faces_conf_list,
-                                                   faces_age_list,
-                                                   faces_gender_list,
-                                                   faces_save_dir)
+            faces_extracted = save_extracted_faces(
+                frames_faces_obj_list, media_root, faces_save_dir)
             total_faces += faces_extracted
         logging.info(f"{total_faces} faces extracted for class {class_name}")
 
@@ -464,17 +489,21 @@ def main():
                         help="""Output face images are resized to this (width, height)
                         -os 112 112. If None, faces are not resized. (default: %(default)s).""")
     args = parser.parse_args()
+    if args.model == "weights/face-detection-caffe/res10_300x300_ssd_iter_140000.caffemodel":
+        args.model = "weights/yolov5s/yolov5s-face.onnx"
     print("Current Arguments: ", args)
 
-    net = load_net(args.model,
+    net = load_net(model=args.model,
+                   feat_net_type=args.face_feat_type,
+                   det_thres=args.det_thres,
+                   bbox_area_thres=args.bbox_area_thres,
                    model_in_size=args.input_size,
                    model_out_size=args.output_size,
                    device=args.device)
 
     filter_faces_from_data(args.raw_datadir_path,
                            args.target_datadir_path,
-                           net,
-                           args.threshold)
+                           net)
 
 
 if __name__ == "__main__":

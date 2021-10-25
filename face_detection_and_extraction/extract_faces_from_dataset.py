@@ -50,16 +50,23 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
 
 class Net(object):
     __slots__ = ["face_net", "inf_func", "bbox_conf_func",
+                 "det_thres", "bbox_area_thres",
                  "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE"]
 
-    def __init__(self, face_net, inf_func, bbox_conf_func, model_in_size=(640, 640), model_out_size=None):
+    def __init__(self, face_net, inf_func, bbox_conf_func, det_thres, bbox_area_thres,
+                 model_in_size=(640, 640), model_out_size=None):
         self.face_net = face_net
         self.inf_func = inf_func
         self.bbox_conf_func = bbox_conf_func
+        self.det_thres = det_thres
+        self.bbox_area_thres = bbox_area_thres
         # in_size = (width, height), conv to int
         model_in_size = tuple(map(int, model_in_size))
-        # input size must be multiple of max stride 32 for yolov5 models
-        self.FACE_MODEL_INPUT_SIZE = tuple(map(check_img_size, model_in_size))
+        if isinstance(face_net, cv2.dnn_Net):
+            self.FACE_MODEL_INPUT_SIZE = model_in_size
+        else:
+            # input size must be multiple of max stride 32 for yolov5 models
+            self.FACE_MODEL_INPUT_SIZE = tuple(map(check_img_size, model_in_size))
         # only for cv2 models
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
         # (width, height), size the detected faces are resized
@@ -77,7 +84,7 @@ def get_img_vid_media_type(fname):
     return None
 
 
-def load_net(model, prototxt, model_in_size=(300, 300), model_out_size=(112, 112), device="cpu"):
+def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size, model_out_size, device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -106,11 +113,13 @@ def load_net(model, prototxt, model_in_size=(300, 300), model_out_size=(112, 112
             print("Using GPU device")
         inf_func = inference_cv2_model
         bbox_conf_func = get_bboxes_and_confs_from_cv2_dets
-    return Net(face_net, inf_func, bbox_conf_func, model_in_size, model_out_size)
+    return Net(face_net, inf_func, bbox_conf_func,
+               det_thres, bbox_area_thres,
+               model_in_size, model_out_size)
 
 
 def inference_cv2_model(net, cv2_img, input_size):
-    resized = pad_resize_image(cv2_img, input_size=input_size)
+    resized = pad_resize_image(cv2_img, new_size=input_size)
     # opencv expects BGR format
     blob = cv2.dnn.blobFromImage(resized, 1.0,
                                  net.FACE_MODEL_INPUT_SIZE,
@@ -129,30 +138,45 @@ def inference_yolov5_onnx_model(net, cv2_img, input_size):
     return detections[0]
 
 
-def get_bboxes_and_confs_from_cv2_dets(detections, threshold, orig_size, in_size):
+def get_bboxes_and_confs_from_cv2_dets(detections, det_thres, bbox_area_thres, orig_size, in_size):
     """
     Returns a tuple of bounding boxes and confidence scores
     """
     w, h = orig_size
     iw, ih = in_size
     # filter detections below threshold
-    detections = detections[detections[:, 2] > threshold]
+    detections = detections[detections[:, 2] > det_thres]
+    detections[:, 3:7] = detections[:, 3:7] * np.array([iw, ih, iw, ih])
+    # only select bboxes with area greater than 0.15% of total area of frame
+    total_area = iw * ih
+    bbox_area = ((detections[:, 5] - detections[:, 3])
+                 * (detections[:, 6] - detections[:, 4]))
+    bbox_area_perc = 100 * bbox_area / total_area
+    detections = detections[bbox_area_perc > bbox_area_thres]
+
     confs = detections[:, 2]
     # rescale detections to orig image size taking the padding into account
-    boxes = detections[:, 3:7] * np.array([iw, ih, iw, ih])
+    boxes = detections[:, 3:7]
     boxes = scale_coords((ih, iw), boxes, (h, w)).round()
 
     return boxes, confs
 
 
-def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_size):
+def get_bboxes_and_confs_from_yolov5_dets(detections, det_thres, bbox_area_thres, orig_size, in_size):
     """
     Returns a tuple of bounding boxes and confidence scores
     """
     w, h = orig_size
     iw, ih = in_size
     # filter detections below threshold
-    detections = detections[detections[..., 4] > threshold]
+    detections = detections[detections[..., 4] > det_thres]
+    # only select bboxes with area greater than 0.15% of total area of frame
+    total_area = iw * ih
+    bbox_area = ((detections[:, 2] - detections[:, 0])
+                 * (detections[:, 3] - detections[:, 1]))
+    bbox_area_perc = 100 * bbox_area / total_area
+    detections = detections[bbox_area_perc > bbox_area_thres]
+
     confs = detections[..., 4].numpy()
     # rescale detections to orig image size taking the padding into account
     boxes = detections[..., :4].numpy()
@@ -161,7 +185,7 @@ def get_bboxes_and_confs_from_yolov5_dets(detections, threshold, orig_size, in_s
     return boxes, confs
 
 
-def extract_face_and_conf_list(net, img, threshold=0.5):
+def extract_face_and_conf_list(net, img):
     """returns a tuple of two lists: cv2 images containing faces, conf of said face dets
     """
     if isinstance(img, str):
@@ -178,7 +202,7 @@ def extract_face_and_conf_list(net, img, threshold=0.5):
         return [], []
     # obtain bounding boxesx and conf scores
     boxes, confs = net.bbox_conf_func(
-        detections, threshold, orig_size=(w, h), in_size=(iw, ih))
+        detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
 
     tx, ty = -6, -1
     bx, by = 4, 5
@@ -213,12 +237,13 @@ def save_extracted_faces(media_prefix_name_list, faces_img_list, faces_conf_list
         for face_img, face_conf in zip(face_img_list, face_conf_list):
             i += 1
             face_conf = round(face_conf, 3)
-            cv2.imwrite(f"{faces_save_dir}/{prefix}_face_{i}_conf_{str(face_conf).replace('.', '_')}.jpg", face_img)
+            cv2.imwrite(
+                f"{faces_save_dir}/{prefix}_face_{i}_conf_{str(face_conf).replace('.', '_')}.jpg", face_img)
         total += i
     return total
 
 
-def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
+def filter_faces_from_data(raw_img_dir, target_dir, net):
     os.makedirs(target_dir, exist_ok=True)
     dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
 
@@ -244,13 +269,17 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
             mtype = get_img_vid_media_type(media_path)
             if mtype == "image":
                 media_prefix_name_list.append(media_root)
-                faces, confs = extract_face_and_conf_list(net, media_path, threshold)
+                faces, confs = extract_face_and_conf_list(net, media_path)
                 faces_img_list.append(faces)
                 faces_conf_list.append(confs)
             elif mtype == "video":
                 # save faces from videos inside sub dirs if flag is set
                 if SAVE_VIDEO_FACES_IN_SUBDIRS:
                     faces_save_dir = os.path.join(faces_save_dir, media_root)
+                    if os.path.exists(faces_save_dir):  # skip pre-extracted faces
+                        print(
+                            f"Skipping {faces_save_dir} as it already exists.")
+                        continue
                     os.makedirs(faces_save_dir, exist_ok=True)
 
                 cap = cv2.VideoCapture(media_path)
@@ -265,8 +294,9 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, threshold):
                         if save_frames_num > MAX_N_FRAME_FROM_VID:
                             break
                         mprefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
-                        media_prefix_name_list.append(mprefix + f"sec_{i//step}_")
-                        faces, confs = extract_face_and_conf_list(net, frame, threshold)
+                        media_prefix_name_list.append(
+                            mprefix + f"sec_{i//step}_")
+                        faces, confs = extract_face_and_conf_list(net, frame)
                         faces_img_list.append(faces)
                         faces_conf_list.append(confs)
                     ret, frame = cap.read()
@@ -302,17 +332,17 @@ def main():
                         help='Output face images are resized to this (width, height) -os 112 112. (default: %(default)s).')
     args = parser.parse_args()
     print("Current Arguments: ", args)
-
-    net = load_net(args.model,
-                   args.prototxt,
+    net = load_net(model=args.model,
+                   prototxt=args.prototxt,
+                   det_thres=args.det_thres,
+                   bbox_area_thres=args.bbox_area_thres,
                    model_in_size=args.input_size,
                    model_out_size=args.output_size,
                    device=args.device)
 
     filter_faces_from_data(args.raw_datadir_path,
                            args.target_datadir_path,
-                           net,
-                           args.threshold)
+                           net)
 
 
 if __name__ == "__main__":

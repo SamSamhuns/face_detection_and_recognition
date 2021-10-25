@@ -42,6 +42,26 @@ $ python detect_face_yolov5_face.py -i <PATH_TO_IMG>  # image mode
 $ python detect_face_yolov5_face.py -v <PATH_TO_VID>  # video mode
 ```
 
+### Face Extraction Dataset Organization
+
+```
+#################### Raw Data Organization #########################
+       dataset
+             |_ class_1
+                       |_ img1/vid1
+                       |_ img2/vid2
+                       |_ ....
+             |_ class_2
+                       |_ img1/vid1
+                       |_ img2/vid2
+                       |_ ....
+             ...
+
+example raw data path    = "raw_data/dataset"
+example target data path = "target_data/dataset"
+###################################################################
+```
+
 ## Face Extraction from dataset
 
 ```shell

@@ -11,9 +11,12 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
-from modules.common_utils import get_argparse, fix_path_for_globbing
-from modules.common_utils import pad_resize_image, scale_coords
-from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image, conv_strides_to_anchors, w_non_max_suppression
+from modules.common_utils import get_argparse, fix_path_for_globbing, check_img_size
+from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
+from modules.opencv2_dnn.utils import get_bboxes_and_confs as get_bboxes_confs_cv2
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model as inf_yolov5
+from modules.yolov5_face.onnx.onnx_utils import get_bboxes_and_confs as get_bboxes_confs_yolov5
+
 
 mimetypes.init()
 today = datetime.today()
@@ -66,7 +69,8 @@ class Net(object):
             self.FACE_MODEL_INPUT_SIZE = model_in_size
         else:
             # input size must be multiple of max stride 32 for yolov5 models
-            self.FACE_MODEL_INPUT_SIZE = tuple(map(check_img_size, model_in_size))
+            self.FACE_MODEL_INPUT_SIZE = tuple(
+                map(check_img_size, model_in_size))
         # only for cv2 models
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
         # (width, height), size the detected faces are resized
@@ -101,8 +105,8 @@ def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size, model_o
             f"[ERROR] model with extension {fext} not implemented")
 
     if fext == ".onnx":
-        inf_func = inference_yolov5_onnx_model
-        bbox_conf_func = get_bboxes_and_confs_from_yolov5_dets
+        inf_func = inf_yolov5
+        bbox_conf_func = get_bboxes_confs_yolov5
     else:
         if device == "cpu":
             face_net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
@@ -111,78 +115,11 @@ def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size, model_o
             face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
             face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
             print("Using GPU device")
-        inf_func = inference_cv2_model
-        bbox_conf_func = get_bboxes_and_confs_from_cv2_dets
+        inf_func = inf_cv2
+        bbox_conf_func = get_bboxes_confs_cv2
     return Net(face_net, inf_func, bbox_conf_func,
                det_thres, bbox_area_thres,
                model_in_size, model_out_size)
-
-
-def inference_cv2_model(net, cv2_img, input_size):
-    resized = pad_resize_image(cv2_img, new_size=input_size)
-    # opencv expects BGR format
-    blob = cv2.dnn.blobFromImage(resized, 1.0,
-                                 net.FACE_MODEL_INPUT_SIZE,
-                                 net.FACE_MODEL_MEAN_VALUES)
-    net.face_net.setInput(blob)
-    detections = net.face_net.forward()
-    return detections[0][0]
-
-
-def inference_yolov5_onnx_model(net, cv2_img, input_size):
-    resized = preprocess_image(cv2_img, input_size=input_size)
-    outputs = net.face_net.run(None, {"images": resized})
-    outputx = conv_strides_to_anchors(outputs, "cpu")
-    detections = w_non_max_suppression(
-        outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
-    return detections[0]
-
-
-def get_bboxes_and_confs_from_cv2_dets(detections, det_thres, bbox_area_thres, orig_size, in_size):
-    """
-    Returns a tuple of bounding boxes and confidence scores
-    """
-    w, h = orig_size
-    iw, ih = in_size
-    # filter detections below threshold
-    detections = detections[detections[:, 2] > det_thres]
-    detections[:, 3:7] = detections[:, 3:7] * np.array([iw, ih, iw, ih])
-    # only select bboxes with area greater than 0.15% of total area of frame
-    total_area = iw * ih
-    bbox_area = ((detections[:, 5] - detections[:, 3])
-                 * (detections[:, 6] - detections[:, 4]))
-    bbox_area_perc = 100 * bbox_area / total_area
-    detections = detections[bbox_area_perc > bbox_area_thres]
-
-    confs = detections[:, 2]
-    # rescale detections to orig image size taking the padding into account
-    boxes = detections[:, 3:7]
-    boxes = scale_coords((ih, iw), boxes, (h, w)).round()
-
-    return boxes, confs
-
-
-def get_bboxes_and_confs_from_yolov5_dets(detections, det_thres, bbox_area_thres, orig_size, in_size):
-    """
-    Returns a tuple of bounding boxes and confidence scores
-    """
-    w, h = orig_size
-    iw, ih = in_size
-    # filter detections below threshold
-    detections = detections[detections[..., 4] > det_thres]
-    # only select bboxes with area greater than 0.15% of total area of frame
-    total_area = iw * ih
-    bbox_area = ((detections[:, 2] - detections[:, 0])
-                 * (detections[:, 3] - detections[:, 1]))
-    bbox_area_perc = 100 * bbox_area / total_area
-    detections = detections[bbox_area_perc > bbox_area_thres]
-
-    confs = detections[..., 4].numpy()
-    # rescale detections to orig image size taking the padding into account
-    boxes = detections[..., :4].numpy()
-    boxes = scale_coords((ih, iw), boxes, (h, w)).round()
-
-    return boxes, confs
 
 
 def extract_face_and_conf_list(net, img):
@@ -195,9 +132,9 @@ def extract_face_and_conf_list(net, img):
 
     h, w = image.shape[:2]
     iw, ih = net.FACE_MODEL_INPUT_SIZE
-
-    # pass the blob through the network to get raw detections
-    detections = net.inf_func(net, image, net.FACE_MODEL_INPUT_SIZE)
+    # mean values are ignored when yolov5 model is used
+    detections = net.inf_func(
+        net.face_net, image, net.FACE_MODEL_INPUT_SIZE, mean_values=net.FACE_MODEL_MEAN_VALUES)
     if detections is None:  # no faces detected
         return [], []
     # obtain bounding boxesx and conf scores

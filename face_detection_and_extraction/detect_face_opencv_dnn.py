@@ -2,20 +2,23 @@ import numpy as np
 import cv2
 import os
 
-from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import pad_resize_image, scale_coords, draw_bbox_on_image
+from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
+from modules.opencv2_dnn.utils import inference_cv2_model, get_bboxes_and_confs
 
 
 class Net(object):
-    __slots__ = ["face_net", "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE"]
+    __slots__ = ["face_net", "det_thres", "bbox_area_thres",
+                 "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE"]
 
-    def __init__(self, face_net, model_in_size=(300, 300)):
+    def __init__(self, face_net, det_thres, bbox_area_thres, model_in_size):
         self.face_net = face_net
+        self.det_thres = det_thres
+        self.bbox_area_thres = bbox_area_thres
         self.FACE_MODEL_INPUT_SIZE = model_in_size  # (width, height)
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
 
 
-def load_net(model, prototxt, model_in_size=(300, 300), device="cpu"):
+def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size=(300, 300), device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -36,21 +39,10 @@ def load_net(model, prototxt, model_in_size=(300, 300), device="cpu"):
         face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         print("Using GPU device")
-    return Net(face_net, model_in_size)
+    return Net(face_net, det_thres, bbox_area_thres, model_in_size)
 
 
-def inference_model(net, cv2_img):
-    resized = pad_resize_image(cv2_img, net.FACE_MODEL_INPUT_SIZE)
-    # opencv expects BGR format
-    blob = cv2.dnn.blobFromImage(resized, 1.0,
-                                 net.FACE_MODEL_INPUT_SIZE,
-                                 net.FACE_MODEL_MEAN_VALUES)
-    net.face_net.setInput(blob)
-    faces = net.face_net.forward()
-    return faces
-
-
-def inference_img(net, img, threshold, waitKey_val=0):
+def inference_img(net, img, waitKey_val=0):
     # load the input image and construct an input blob for the image
     # by resizing to a fixed 300x300 pixels and then normalizing it
     if isinstance(img, str):
@@ -64,31 +56,29 @@ def inference_img(net, img, threshold, waitKey_val=0):
         raise Exception("image cannot be read")
 
     h, w = image.shape[:2]
-    nw, nh = net.FACE_MODEL_INPUT_SIZE
+    iw, ih = net.FACE_MODEL_INPUT_SIZE
 
     # pass the blob through the network and
     # obtain the detections and predictions
-    detections = inference_model(net, image)[0][0]
-
-    # filter dtections below threshold
-    detections = detections[detections[:, 2] > threshold]
-    # rescale detections to orig image size taking the padding into account
-    boxes = detections[:, 3:7] * np.array([nw, nh, nw, nh])
-    boxes = scale_coords((nh, nw), boxes, (h, w)).round()
-    confs = detections[:, 2]
+    detections = inference_cv2_model(net.face_net,
+                                     image,
+                                     net.FACE_MODEL_INPUT_SIZE,
+                                     net.FACE_MODEL_MEAN_VALUES)
+    boxes, confs = get_bboxes_and_confs(
+        detections, net.det_thres, net.bbox_area_thres, (w, h), (iw, ih))
     draw_bbox_on_image(image, boxes, confs)
 
     cv2.imshow("opencv_dnn", image)
     cv2.waitKey(waitKey_val)
 
 
-def inference_vid(net, vid, threshold):
+def inference_vid(net, vid):
     cap = cv2.VideoCapture(vid)
     ret, frame = cap.read()
 
     while ret:
         # inference and display the resulting frame
-        inference_img(net, frame, threshold, waitKey_val=5)
+        inference_img(net, frame, waitKey_val=5)
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
@@ -96,8 +86,8 @@ def inference_vid(net, vid, threshold):
     cv2.destroyAllWindows()
 
 
-def inference_webcam(net, cam_index, threshold):
-    inference_vid(net, cam_index, threshold)
+def inference_webcam(net, cam_index):
+    inference_vid(net, cam_index)
 
 
 def batch_inference_img(net, cv2_img):
@@ -144,7 +134,6 @@ def batch_inference_img(net, cv2_img):
 
 def main():
     parser = get_argparse(description="OpenCV DNN face detection")
-    parser.remove_argument("bbox_area_thres")
     parser.add_argument("--device", default="cpu",
                         choices=["cpu", "gpu"],
                         help="Device to inference on. (default: $(default)s)")
@@ -156,16 +145,18 @@ def main():
 
     net = load_net(args.model,
                    args.prototxt,
+                   det_thres=args.det_thres,
+                   bbox_area_thres=args.bbox_area_thres,
                    model_in_size=args.input_size,
                    device=args.device)
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.det_thres)
+        inference_webcam(net, int(args.input_src))
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.det_thres)
+        inference_vid(net, args.input_src)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.det_thres)
+        inference_img(net, args.input_src)
     else:
         print("File type or inference mode not recognized. Use --help")
 

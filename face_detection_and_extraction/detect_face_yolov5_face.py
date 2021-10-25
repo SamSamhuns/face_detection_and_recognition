@@ -3,17 +3,29 @@ import torch
 import cv2
 import os
 
-from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import scale_coords, draw_bbox_on_image
-
-from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image
-from modules.yolov5_face.onnx.onnx_utils import conv_strides_to_anchors, non_max_suppression, w_non_max_suppression
+from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
+from modules.yolov5_face.onnx.onnx_utils import check_img_size
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model, get_bboxes_and_confs
 
 
-def load_net(model):
+class Net(object):
+    __slots__ = ["face_net", "det_thres", "bbox_area_thres", "model_in_size"]
+
+    def __init__(self, face_net, det_thres, bbox_area_thres, model_in_size):
+        self.face_net = face_net
+        self.det_thres = det_thres
+        self.bbox_area_thres = bbox_area_thres
+        # in_size = (width, height), conv to int
+        model_in_size = tuple(map(int, model_in_size))
+        # input size must be multiple of max stride 32 for yolov5 models
+        self.model_in_size = tuple(map(check_img_size, model_in_size))
+
+
+def load_net(model, det_thres, bbox_area_thres, model_in_size):
     # load face detection model
     fpath, fext = os.path.splitext(model)
     if fext == ".pth":
+        raise NotImplementedError("pytorch model inference not setup yet")
         from modules.yolov5_face.pytorch import attempt_load
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -24,39 +36,10 @@ def load_net(model):
     else:
         raise NotImplementedError(
             f"[ERROR] model with extension {fext} not implemented")
-    return net
+    return Net(net, det_thres, bbox_area_thres, model_in_size)
 
 
-def plot_detections(detections, cv2_img, threshold, in_size_WH):
-    # filter detections below threshold
-    detections = detections[detections[..., 4] > threshold]
-    boxes = detections[..., :4].numpy()
-    confs = detections[..., 4].numpy()
-
-    mw, mh = in_size_WH
-    h, w = cv2_img.shape[:2]
-    # rescale detections to orig image size taking the padding into account
-    boxes = scale_coords((mh, mw), boxes, (h, w)).round()
-    draw_bbox_on_image(cv2_img, boxes, confs)
-    return cv2_img
-
-
-def inference_onnx_model(net, cv2_img, input_size, official=False):
-    img = preprocess_image(cv2_img, input_size=input_size)
-    outputs = net.run(None, {"images": img})
-
-    if official:  # for official yolov5 models
-        detections = torch.from_numpy(np.array(outputs[0]))
-        detections = non_max_suppression(
-            detections, conf_thres=0.4, iou_thres=0.5, agnostic=False)
-    else:         # for yolov5-face models
-        outputx = conv_strides_to_anchors(outputs, "cpu")
-        detections = w_non_max_suppression(
-            outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
-    return detections[0]
-
-
-def inference_img(net, img, input_size, threshold, waitKey_val=0):
+def inference_img(net, img, waitKey_val=0):
     # load the input image and construct an input blob for the image
     # by resizing to a fixed 300x300 pixels and then normalizing it
     if isinstance(img, str):
@@ -70,21 +53,25 @@ def inference_img(net, img, input_size, threshold, waitKey_val=0):
         raise Exception("image cannot be read")
 
     # pass the image through the network and get detections
-    detections = inference_onnx_model(net, image, input_size)
+    detections = inference_onnx_model(net.face_net, image, net.model_in_size)
     if detections is not None:
-        plot_detections(detections, image, threshold=threshold, in_size_WH=input_size)
+        iw, ih = net.model_in_size
+        h, w = image.shape[:2]
+        boxes, confs = get_bboxes_and_confs(
+            detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
+        draw_bbox_on_image(image, boxes, confs)
 
     cv2.imshow("YOLOv5 face", image)
     cv2.waitKey(waitKey_val)
 
 
-def inference_vid(net, vid, input_size, threshold):
+def inference_vid(net, vid):
     cap = cv2.VideoCapture(vid)
     ret, frame = cap.read()
 
     while ret:
         # inference and display the resulting frame
-        inference_img(net, frame, input_size, threshold, waitKey_val=5)
+        inference_img(net, frame, waitKey_val=5)
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
@@ -92,14 +79,14 @@ def inference_vid(net, vid, input_size, threshold):
     cv2.destroyAllWindows()
 
 
-def inference_webcam(net, cam_index, input_size, threshold):
-    inference_vid(net, cam_index, input_size, threshold)
+def inference_webcam(net, cam_index):
+    inference_vid(net, cam_index)
 
 
 def main():
     parser = get_argparse(
-        description="Blazeface face detection", conflict_handler='resolve')
-    parser.remove_arguments(["prototxt", "bbox_area_thres"])
+        description="YOLOv5-face face detection", conflict_handler='resolve')
+    parser.remove_argument("prototxt")
     parser.add_argument("-m", "--model",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')
@@ -108,20 +95,17 @@ def main():
                         default=(640, 640),
                         help='Input images are resized to this size (width, height). (default: %(default)s).')
     args = parser.parse_args()
-    args.input_size = tuple(map(int, args.input_size))
-    # ensure input size is of correct mult
-    args.input_size = tuple(map(check_img_size, args.input_size))
     print("Current Arguments: ", args)
 
-    net = load_net(args.model)
+    net = load_net(args.model, args.det_thres, args.bbox_area_thres, args.input_size)
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.input_size, args.det_thres)
+        inference_webcam(net, int(args.input_src))
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.input_size, args.det_thres)
+        inference_vid(net, args.input_src)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.input_size, args.det_thres)
+        inference_img(net, args.input_src)
     else:
         print("File type or inference mode not recognized. Use --help")
 

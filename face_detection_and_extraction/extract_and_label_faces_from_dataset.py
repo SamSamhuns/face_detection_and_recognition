@@ -4,7 +4,6 @@
 import os
 import cv2
 import glob
-import torch
 import pickle
 import logging
 import onnxruntime
@@ -12,11 +11,11 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
-from modules.common_utils import scale_coords
 from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
 from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
-from modules.yolov5_face.onnx.onnx_utils import check_img_size, preprocess_image
-from modules.yolov5_face.onnx.onnx_utils import conv_strides_to_anchors, non_max_suppression, w_non_max_suppression
+from modules.yolov5_face.onnx.onnx_utils import check_img_size
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model as inference_yolov5_onnx_model
+from modules.yolov5_face.onnx.onnx_utils import get_bboxes_and_confs as get_bboxes_and_confs_yolov5
 from modules.openvino.utils import OVNetwork
 
 today = datetime.today()
@@ -191,48 +190,10 @@ def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, mo
 
     if fext == ".onnx":
         inf_func = inference_yolov5_onnx_model
-        bbox_conf_func = get_bboxes_and_confs_from_yolov5_dets
+        bbox_conf_func = get_bboxes_and_confs_yolov5
 
     return Net(face_net, feat_net_type, inf_func, bbox_conf_func,
                det_thres, bbox_area_thres, model_in_size, model_out_size)
-
-
-def inference_yolov5_onnx_model(net, cv2_img, input_size, official=False):
-    resized = preprocess_image(cv2_img, input_size=input_size)
-    outputs = net.face_net.run(None, {"images": resized})
-
-    if official:  # for official yolov5 models
-        detections = torch.from_numpy(np.array(outputs[0]))
-        detections = non_max_suppression(
-            detections, conf_thres=0.4, iou_thres=0.5, agnostic=False)
-    else:         # for yolov5-face models
-        outputx = conv_strides_to_anchors(outputs, "cpu")
-        detections = w_non_max_suppression(
-            outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
-    return detections[0]
-
-
-def get_bboxes_and_confs_from_yolov5_dets(detections, det_thres, bbox_area_thres, orig_size, in_size):
-    """
-    Returns a tuple of bounding boxes and confidence scores
-    """
-    w, h = orig_size
-    iw, ih = in_size
-    # filter detections below threshold
-    detections = detections[detections[..., 4] > det_thres]
-    # only select bboxes with area greater than 0.15% of total area of frame
-    total_area = iw * ih
-    bbox_area = ((detections[:, 2] - detections[:, 0])
-                 * (detections[:, 3] - detections[:, 1]))
-    bbox_area_perc = 100 * bbox_area / total_area
-    detections = detections[bbox_area_perc > bbox_area_thres]
-
-    confs = detections[..., 4].numpy()
-    # rescale detections to orig image size taking the padding into account
-    boxes = detections[..., :4].numpy()
-    boxes = scale_coords((ih, iw), boxes, (h, w)).round()
-
-    return boxes, confs
 
 
 def get_age_and_gender_with_cv2_waitKey(image):
@@ -291,7 +252,7 @@ def extract_face_img_id_bbox_conf_age_gender_list(net, img):
     faces, bboxes, faceids, confs, ages, genders = [], [], [], [], [], []
 
     # pass the blob through the network to get raw detections
-    detections = net.inf_func(net, orig_image, net.FACE_MODEL_INPUT_SIZE)
+    detections = net.inf_func(net.face_net, orig_image, net.FACE_MODEL_INPUT_SIZE)
     if detections is None:  # no faces detected
         return faces, faceids, bboxes, confs, ages, genders
     # obtain bounding boxesx and conf scores
@@ -464,7 +425,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
 
 
 def main():
-    parser = get_argparse(description="Dataset face extraction")
+    parser = get_argparse(description="Dataset face extraction & labelling")
     parser.remove_arguments(["input_src", "prototxt"])
     parser.add_argument('-rd', '--raw_datadir_path',
                         type=str, required=True,

@@ -149,6 +149,7 @@ def inference_webcam(net, cam_index, threshold):
 def main():
     parser = get_argparse(
         description="OpenCV DNN face detection with age and gender estimation")
+    parser.remove_argument("bbox_area_thres")
     parser.add_argument("--device", default="cpu",
                         choices=["cpu", "gpu"],
                         help="Device to inference on. (default: $(default)s)")
@@ -166,11 +167,11 @@ def main():
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.threshold)
+        inference_webcam(net, int(args.input_src), args.det_thres)
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.threshold)
+        inference_vid(net, args.input_src, args.det_thres)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.threshold)
+        inference_img(net, args.input_src, args.det_thres)
     else:
         print("File type or inference mode not recognized. Use --help")
 

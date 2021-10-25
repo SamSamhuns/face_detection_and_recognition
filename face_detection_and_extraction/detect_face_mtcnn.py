@@ -70,7 +70,7 @@ def inference_webcam(net, cam_index, threshold):
 
 def main():
     parser = get_argparse(description="MTCNN face detection")
-    parser.remove_arguments(["model", "prototxt"])
+    parser.remove_arguments(["model", "prototxt", "bbox_area_thres"])
     args = parser.parse_args()
 
     # load model
@@ -79,11 +79,11 @@ def main():
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.threshold)
+        inference_webcam(net, int(args.input_src), args.det_thres)
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.threshold)
+        inference_vid(net, args.input_src, args.det_thres)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.threshold)
+        inference_img(net, args.input_src, args.det_thres)
     else:
         print("File type or inference mode not recognized. Use --help")
 

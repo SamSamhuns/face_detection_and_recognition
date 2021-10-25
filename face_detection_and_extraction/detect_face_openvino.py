@@ -57,7 +57,7 @@ def inference_webcam(net, cam_index, threshold):
 
 def main():
     parser = get_argparse(description="OpenVINO face detection")
-    parser.remove_arguments(["model", "prototxt"])
+    parser.remove_arguments(["model", "prototxt", "bbox_area_thres"])
     parser.add_argument("-mb", "--model_bin_path",
                         default="weights/face-detection-0204/face-detection-0204.bin",
                         help="Path to openVINO model BIN file. (default: %(default)s)")
@@ -70,11 +70,11 @@ def main():
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.threshold)
+        inference_webcam(net, int(args.input_src), args.det_thres)
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.threshold)
+        inference_vid(net, args.input_src, args.det_thres)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.threshold)
+        inference_img(net, args.input_src, args.det_thres)
     else:
         print("File type or inference mode not recognized. Use --help")
 

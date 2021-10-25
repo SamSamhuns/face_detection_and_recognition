@@ -99,7 +99,7 @@ def inference_webcam(net, cam_index, input_size, threshold):
 def main():
     parser = get_argparse(
         description="Blazeface face detection", conflict_handler='resolve')
-    parser.remove_argument("prototxt")
+    parser.remove_arguments(["prototxt", "bbox_area_thres"])
     parser.add_argument("-m", "--model",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')
@@ -117,11 +117,11 @@ def main():
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.input_size, args.threshold)
+        inference_webcam(net, int(args.input_src), args.input_size, args.det_thres)
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.input_size, args.threshold)
+        inference_vid(net, args.input_src, args.input_size, args.det_thres)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.input_size, args.threshold)
+        inference_img(net, args.input_src, args.input_size, args.det_thres)
     else:
         print("File type or inference mode not recognized. Use --help")
 

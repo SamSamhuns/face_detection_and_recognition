@@ -106,15 +106,17 @@ class Net(object):
 
     def check_if_face_exists(self, new_feat, new_bbox):
         for i, (faceid, feat, bbox, age, gender) in enumerate(self.face_feat_bbox_age_gender_list):
-            # edist = np.linalg.norm(feat - new_feat)
-            edist = 1 - (np.inner(feat, new_feat) /
-                         (np.linalg.norm(feat) * np.linalg.norm(new_feat)))
+            if self.feat_net_type == "MOBILE_FACENET":
+                dist = np.linalg.norm(feat - new_feat)
+            else:
+                dist = 1 - (np.inner(feat, new_feat) /
+                            (np.linalg.norm(feat) * np.linalg.norm(new_feat)))
             if self.use_bbox_iou:
                 iou = calculate_bbox_iou(bbox, new_bbox)
-            print(f"edist={edist:.3f}, bbox iou={iou:.3f}")
-            if (edist < self.normal_thres and iou > 0.1) or edist < self.harsh_thres:
+            print(f"dist={dist:.3f}, bbox iou={iou:.3f}")
+            if (dist < self.normal_thres and iou > 0.1) or dist < self.harsh_thres:
                 print(
-                    f"Same face detected: iou={iou:.3f} and edist={edist:.3f}")
+                    f"Same face detected: iou={iou:.3f} and dist={dist:.3f}")
                 self.face_feat_bbox_age_gender_list[i][1] = new_feat
                 self.face_feat_bbox_age_gender_list[i][2] = new_bbox
                 return True, faceid, age, gender
@@ -444,7 +446,7 @@ def main():
     parser.add_argument("--device", default="cpu",
                         choices=["cpu", "gpu"],
                         help="Device to inference on. (default: %(default)s)")
-    parser.add_argument("--face_feat_type", default="FACE_REID_MNV3",
+    parser.add_argument("-ft", "--face_feat_type", default="FACE_REID_MNV3",
                         choices=["FACE_REID_MNV3", "MOBILE_FACENET"],
                         help="Type of face feature extracter to use for tracking. (default: %(default)s)")
     parser.add_argument("-is", "--input_size",

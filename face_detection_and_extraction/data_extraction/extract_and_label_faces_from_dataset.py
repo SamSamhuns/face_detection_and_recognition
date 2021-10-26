@@ -2,6 +2,7 @@
 #  train, test and optionally val sub-directory with the same class sub-dir
 #  structure
 import os
+import sys
 import cv2
 import glob
 import pickle
@@ -11,6 +12,7 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
+sys.path.append(".")
 from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
 from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
 from modules.yolov5_face.onnx.onnx_utils import check_img_size

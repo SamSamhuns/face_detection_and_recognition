@@ -1,8 +1,12 @@
 # common utils should not import from other custom packages
 import math
+import json
+import pickle
 import argparse
 import mimetypes
 from typing import List
+from pathlib import Path
+from collections import OrderedDict
 
 import cv2
 import numpy as np
@@ -99,6 +103,24 @@ def get_file_type(file_src):
         if mimestart in ['video', 'image']:
             file_type = mimestart
     return file_type
+
+
+def read_pickle(pickle_path: str):
+    with open(pickle_path, 'rb') as stream:
+        pkl_data = pickle.load(stream)
+    return pkl_data
+
+
+def read_json(fname):
+    fname = Path(fname)
+    with fname.open('rt') as handle:
+        return json.load(handle, object_hook=OrderedDict)
+
+
+def write_json(content, fname):
+    fname = Path(fname)
+    with fname.open('wt') as handle:
+        json.dump(content, handle, indent=4, sort_keys=False)
 
 
 # ##################### image size/coords utils ######################## #

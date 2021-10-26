@@ -3,6 +3,7 @@
 #  structure
 import os
 import cv2
+import sys
 import glob
 import logging
 import mimetypes
@@ -11,6 +12,7 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 
+sys.path.append(".")
 from modules.common_utils import get_argparse, fix_path_for_globbing, check_img_size
 from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
 from modules.opencv2_dnn.utils import get_bboxes_and_confs as get_bboxes_confs_cv2

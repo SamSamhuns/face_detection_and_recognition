@@ -51,6 +51,7 @@ Instructions inside `face_feat_extraction_and_filtering` for face feat extractio
 ### Acknowledgements
 
 -   (YOLOv5-face)[https://github.com/deepcam-cn/yolov5-face]
+-   (Face Age Gender Training)[https://github.com/tae898/age-gender]
 -   (learnopencv age and gender models)[https://github.com/spmallick/learnopencv]
 -   (mtcnn)[https://github.com/ipazc/mtcnn]
 -   (blazeface-python)[https://github.com/hollance/BlazeFace-PyTorch]

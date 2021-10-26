@@ -14,7 +14,7 @@ from datetime import datetime
 from modules.common_utils import get_argparse, fix_path_for_globbing, check_img_size
 from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
 from modules.opencv2_dnn.utils import get_bboxes_and_confs as get_bboxes_confs_cv2
-from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model as inf_yolov5
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_and_confs as get_bboxes_confs_yolov5
 
 

@@ -3,9 +3,9 @@ import torch
 import cv2
 import os
 
-from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
-from modules.yolov5_face.onnx.onnx_utils import check_img_size
-from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model, get_bboxes_and_confs
+from modules.common_utils import get_argparse, get_file_type
+from modules.common_utils import check_img_size, draw_bbox_on_image
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_and_confs
 
 
 class Net(object):
@@ -53,7 +53,7 @@ def inference_img(net, img, waitKey_val=0):
         raise Exception("image cannot be read")
 
     # pass the image through the network and get detections
-    detections = inference_onnx_model(net.face_net, image, net.model_in_size)
+    detections = inference_onnx_model_yolov5_face(net.face_net, image, net.model_in_size)
     if detections is not None:
         iw, ih = net.model_in_size
         h, w = image.shape[:2]

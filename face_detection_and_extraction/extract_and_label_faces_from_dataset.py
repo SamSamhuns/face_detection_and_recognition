@@ -14,7 +14,7 @@ from datetime import datetime
 from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
 from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
 from modules.yolov5_face.onnx.onnx_utils import check_img_size
-from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model as inference_yolov5_onnx_model
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_and_confs as get_bboxes_and_confs_yolov5
 from modules.openvino.utils import OVNetwork
 
@@ -97,7 +97,8 @@ class Net(object):
         elif feat_net_type == "FACE_REID_MNV3":
             self.feature_net = OVNetwork(
                 xml_path="weights/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.xml",
-                bin_path="weights/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.bin")
+                bin_path="weights/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.bin",
+                det_thres=None, bbox_area_thres=None)
         else:
             raise NotImplementedError(
                 f"{feat_net_type} feature extraction net is not implemented" +
@@ -189,7 +190,7 @@ def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, mo
             f"[ERROR] model with extension {fext} not implemented")
 
     if fext == ".onnx":
-        inf_func = inference_yolov5_onnx_model
+        inf_func = inference_onnx_model_yolov5_face
         bbox_conf_func = get_bboxes_and_confs_yolov5
 
     return Net(face_net, feat_net_type, inf_func, bbox_conf_func,
@@ -252,7 +253,8 @@ def extract_face_img_id_bbox_conf_age_gender_list(net, img):
     faces, bboxes, faceids, confs, ages, genders = [], [], [], [], [], []
 
     # pass the blob through the network to get raw detections
-    detections = net.inf_func(net.face_net, orig_image, net.FACE_MODEL_INPUT_SIZE)
+    detections = net.inf_func(net.face_net, orig_image,
+                              net.FACE_MODEL_INPUT_SIZE)
     if detections is None:  # no faces detected
         return faces, faceids, bboxes, confs, ages, genders
     # obtain bounding boxesx and conf scores
@@ -425,8 +427,12 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
 
 
 def main():
-    parser = get_argparse(description="Dataset face extraction & labelling")
+    parser = get_argparse(
+        description="Dataset face extraction & labelling", conflict_handler='resolve')
     parser.remove_arguments(["input_src", "prototxt"])
+    parser.add_argument("-m", "--model",
+                        default="weights/yolov5s/yolov5s-face.onnx",
+                        help='Path to weight file (.pth/.onnx). (default: %(default)s).')
     parser.add_argument('-rd', '--raw_datadir_path',
                         type=str, required=True,
                         help="""Raw dataset dir path with
@@ -450,8 +456,6 @@ def main():
                         help="""Output face images are resized to this (width, height)
                         -os 112 112. If None, faces are not resized. (default: %(default)s).""")
     args = parser.parse_args()
-    if args.model == "weights/face-detection-caffe/res10_300x300_ssd_iter_140000.caffemodel":
-        args.model = "weights/yolov5s/yolov5s-face.onnx"
     print("Current Arguments: ", args)
 
     net = load_net(model=args.model,

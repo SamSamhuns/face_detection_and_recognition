@@ -91,7 +91,8 @@ Annotation data is also saved in the following pickle format:
       ],
       "confs": [0.6, 0.8],
       "ages": ["20-50", "20-50"],
-      "genders": ["male", "female"]
+      "genders": ["male", "female"],
+      "normed_embedding": ["[0.1, ..., 0.2]", "[0.3, ..., 0.4]"]
     },
     {
       "frame_num": 1,
@@ -103,7 +104,8 @@ Annotation data is also saved in the following pickle format:
       ],
       "confs": [0.8, 0.9],
       "ages": ["0-5", "20-50"],
-      "genders": ["male", "female"]
+      "genders": ["male", "female"],
+      "normed_embedding": ["[0.1, ..., 0.2]", "[0.3, ..., 0.4]"]
     }
   ]
 }

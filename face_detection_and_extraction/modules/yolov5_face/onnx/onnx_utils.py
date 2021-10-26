@@ -383,7 +383,7 @@ def get_bboxes_and_confs(detections, det_thres, bbox_area_thres, orig_size, in_s
     return boxes, confs
 
 
-def inference_onnx_model(net, cv2_img, input_size, official=False, **kwargs):
+def inference_onnx_model_yolov5_face(net, cv2_img, input_size, official=False, **kwargs):
     # note any other kwargs are ignored
     resized = preprocess_image(cv2_img, input_size=input_size)
     outputs = net.run(None, {"images": resized})

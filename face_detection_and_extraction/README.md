@@ -65,13 +65,13 @@ example target data path = "target_data/dataset"
 ## Face Extraction from dataset
 
 ```shell
-$ python extract_faces_img_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
+$ python data_extraction/extract_faces_img_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
 ```
 
 ## Face Extraction and Labelling from dataset
 
 ```shell
-$ python extract_and_label_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
+$ python data_extraction/extract_and_label_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
 ```
 
 Annotation data is also saved in the following pickle format:
@@ -109,4 +109,20 @@ Annotation data is also saved in the following pickle format:
     }
   ]
 }
+```
+
+## Face Extraction from imdb-wiki dataset
+
+```shell
+$ python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
+```
+
+## Face Age and Gender training
+
+```shell
+$ cd face_age_gender_training
+# set up hyper-parameters in hp-tuning.json
+$ python hp-tuning.py
+# set up parameters in train.json based on tuned hyperparameter
+$ python train.py
 ```

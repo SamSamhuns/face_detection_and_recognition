@@ -121,8 +121,8 @@ $ python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, dat
 
 ```shell
 $ cd face_age_gender_training
-# set up hyper-parameters in hp-tuning.json
-$ python hp-tuning.py
-# set up parameters in train.json based on tuned hyperparameter
-$ python train.py
+# set up hyper-parameters in hp_tuning_{age/gender}.json
+$ python hp_tuning.py -c JSON_CONFIG_FILE_PATH
+# set up parameters in train_{age/gender}.json based on tuned hyperparameter
+$ python train.py -c JSON_CONFIG_FILE_PATH
 ```

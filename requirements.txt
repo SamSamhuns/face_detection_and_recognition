@@ -4,4 +4,5 @@
 -r face_detection_and_extraction/opencv.txt
 -r face_detection_and_extraction/openvino.txt
 -r face_detection_and_extraction/yolov5-face.txt
+-r face_detection_and_extraction/age_gender_training.txt
 -r face_feat_extraction_and_filtering/requirements.txt

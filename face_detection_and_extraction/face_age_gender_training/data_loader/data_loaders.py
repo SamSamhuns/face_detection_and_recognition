@@ -1,9 +1,10 @@
-from base import BaseDataLoader
+import os
+import random
+import logging
+
 import torch
 import numpy as np
-import os
-import logging
-import random
+from base import BaseDataLoader
 
 
 class GenderDataset(torch.utils.data.Dataset):
@@ -35,7 +36,9 @@ class GenderDataset(torch.utils.data.Dataset):
                 data = [d for da in data for d in da]
             else:
                 data = data[test_cross_val]
-
+        elif dataset.lower() == 'custom_age_gender':
+            data = np.load(os.path.join(data_dir, f"{dataset.lower()}/data.npy"),
+                           allow_pickle=True)
         elif dataset.lower() in ['wiki', 'imdb']:
             data = np.load(os.path.join(data_dir, f"{dataset.lower()}/data.npy"),
                            allow_pickle=True)
@@ -44,9 +47,7 @@ class GenderDataset(torch.utils.data.Dataset):
                                 allow_pickle=True).tolist()
             data_wiki = np.load(os.path.join(data_dir, "wiki/data.npy"),
                                 allow_pickle=True).tolist()
-
             data = data_imdb + data_wiki
-
             del data_imdb, data_wiki
         elif dataset.lower() == 'imdb_wiki_adience':
             data_imdb = np.load(os.path.join(data_dir, "imdb/data.npy"),
@@ -57,9 +58,7 @@ class GenderDataset(torch.utils.data.Dataset):
                                    allow_pickle=True).item()
             data_adience = [sample for _, samples in data_adience.items()
                             for sample in samples]
-
             data = data_imdb + data_wiki + data_adience
-
             del data_imdb, data_wiki, data_adience
         else:
             raise NotImplementedError
@@ -123,13 +122,11 @@ class AgeDataset(torch.utils.data.Dataset):
         if dataset == 'Adience':
             data = np.load(os.path.join(data_dir, "Adience/data-aligned.npy"),
                            allow_pickle=True).item()
-
             if training:
                 data = [data[i] for i in range(5) if i != test_cross_val]
                 data = [d for da in data for d in da]
             else:
                 data = data[test_cross_val]
-
         elif dataset.lower() in ['wiki', 'imdb']:
             data = np.load(os.path.join(data_dir, f"{dataset.lower()}/data.npy"),
                            allow_pickle=True)
@@ -138,9 +135,7 @@ class AgeDataset(torch.utils.data.Dataset):
                                 allow_pickle=True).tolist()
             data_wiki = np.load(os.path.join(data_dir, "wiki/data.npy"),
                                 allow_pickle=True).tolist()
-
             data = data_imdb + data_wiki
-
             del data_imdb, data_wiki
         elif dataset.lower() == 'imdb_wiki_adience':
             data_imdb = np.load(os.path.join(data_dir, "imdb/data.npy"),
@@ -151,9 +146,7 @@ class AgeDataset(torch.utils.data.Dataset):
                                    allow_pickle=True).item()
             data_adience = [sample for _, samples in data_adience.items()
                             for sample in samples]
-
             data = data_imdb + data_wiki + data_adience
-
             del data_imdb, data_wiki, data_adience
         else:
             raise NotImplementedError
@@ -208,11 +201,9 @@ class GenderDataLoader(BaseDataLoader):
                  limit_data: int = None):
 
         assert num_classes == 2
-
         self.dataset = GenderDataset(data_dir=data_dir, dataset=dataset,
                                      test_cross_val=test_cross_val,
                                      training=training, limit_data=limit_data)
-
         super().__init__(self.dataset, batch_size, shuffle, validation_split,
                          num_workers)
 
@@ -233,6 +224,5 @@ class AgeDataLoader(BaseDataLoader):
                                   test_cross_val=test_cross_val,
                                   training=training, num_classes=num_classes,
                                   limit_data=limit_data)
-
         super().__init__(self.dataset, batch_size, shuffle, validation_split,
                          num_workers)

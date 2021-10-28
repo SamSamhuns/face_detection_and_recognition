@@ -177,7 +177,7 @@ def main(config_path: str):
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser(description='hp-tuning')
-    args.add_argument('-c', '--config', default="hp-tuning.json",
+    args.add_argument('-c', '--config', default="config/hp_tuning_age.json",
                       help="Path to tuning json file (default: %(default)s)")
     config_path = args.parse_args().config
     main(config_path)

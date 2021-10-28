@@ -18,7 +18,7 @@ sys.path.append(".")
 from modules.common_utils import get_argparse, check_img_size
 from modules.common_utils import read_pickle, write_json
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_and_confs
-from modules.mobile_facenet.utils import inference_onnx_model_mobile_facenet
+from modules.mobile_facenet.utils import inference_onnx_model_mobile_facenet as inference_face_feats
 
 today = datetime.today()
 year, month, day, hour, minute, sec = today.year, today.month, today.day, today.hour, today.minute, today.second
@@ -74,6 +74,23 @@ def get_metadata_from_imdb_wiki(mat_path, db):
     return full_path, dob, gender, photo_taken, face_score, second_face_score, age
 
 
+def bucket_ages_into_groups(age):
+    """
+    Convert ages into age-groups
+    """
+    if 0 <= age <= 5:      # toddlers
+        age = 0
+    elif 6 <= age <= 12:   # kids
+        age = 1
+    elif 13 <= age <= 19:  # teens
+        age = 2
+    elif 20 <= age <= 50:  # adults
+        age = 3
+    else:                  # seniors
+        age = 4
+    return age
+
+
 def load_net(face_det_onnx_path, face_feat_onnx_path, det_thres, bbox_area_thres, face_det_in_size, face_feat_in_size):
     # load face det net
     face_det_net = onnxruntime.InferenceSession(face_det_onnx_path)
@@ -123,7 +140,7 @@ def extract_imdb_wiki_yolov5(dataset_path, net):
             x, y, xw, yh = max(x, 0), max(y, 0), min(xw, w), min(yh, h)
             face = image[y:yh, x:xw].copy()
             face = cv2.resize(face, (net.face_feat_in_size))
-            face_feat = inference_onnx_model_mobile_facenet(
+            face_feat = inference_face_feats(
                 net.feat_net, face, net.face_feat_in_size)
             normed_feat = face_feat / np.linalg.norm(face_feat)
             face_feats.append(normed_feat)
@@ -142,7 +159,7 @@ def extract_imdb_wiki_yolov5(dataset_path, net):
     logging.info("Face and feature vector extraction complete.")
 
 
-def clean_imdb_wiki(dataset_path: str, det_score: float = 0.8):
+def clean_imdb_wiki(dataset_path: str, det_score: float = 0.8, bucket_ages=True):
     """Copied from
     https://github.com/yu4u/age-gender-estimation/blob/master/create_db.py
     """
@@ -203,7 +220,10 @@ def clean_imdb_wiki(dataset_path: str, det_score: float = 0.8):
             continue
 
         genders.append({0: 'f', 1: 'm'}[int(gender[i])])
-        ages.append(int(age[i]))
+        if bucket_ages:
+            ages.append(bucket_ages_into_groups(int(age[i])))
+        else:
+            ages.append(int(age[i]))
         img_paths.append(img_path)
         face_info_pkl_paths.append(face_info_pkl_path)
     assert len(genders) == len(ages) == len(img_paths) == len(face_info_pkl_paths)

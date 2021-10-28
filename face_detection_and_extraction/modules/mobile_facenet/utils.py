@@ -15,4 +15,4 @@ def inference_onnx_model_mobile_facenet(feature_net, face, face_feat_in_size=(11
     face = np.expand_dims(np.transpose(face, (2, 0, 1)),
                           axis=0).astype(np.float32)
     features = feature_net.run(None, {"images": face})  # BGR fmt
-    return features[0]
+    return features[0][0]

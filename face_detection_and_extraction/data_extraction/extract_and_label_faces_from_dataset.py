@@ -154,7 +154,7 @@ class Net(object):
         face = np.expand_dims(np.transpose(face, (2, 0, 1)),
                               axis=0).astype(np.float32)
         features = self.feature_net.run(None, {"images": face})  # BGR fmt
-        return features[0]
+        return features[0][0]
 
     def _get_face_features_face_reid(self, face):
         """

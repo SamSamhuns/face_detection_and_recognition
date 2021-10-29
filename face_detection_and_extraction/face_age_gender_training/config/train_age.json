@@ -9,7 +9,7 @@
             "dropout": 0.05,
             "num_residuals_per_block": 1,
             "num_blocks": 2,
-            "num_classes": 101,
+            "num_classes": 5,
             "num_initial_features": 512,
             "add_residual": true,
             "add_IC": true

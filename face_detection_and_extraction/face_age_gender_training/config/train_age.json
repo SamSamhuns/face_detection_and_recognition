@@ -24,7 +24,7 @@
             "validation_split": 0,
             "num_workers": 8,
             "dataset": "wiki",
-            "num_classes": 101
+            "num_classes": 5
         }
     },
     "optimizer": {

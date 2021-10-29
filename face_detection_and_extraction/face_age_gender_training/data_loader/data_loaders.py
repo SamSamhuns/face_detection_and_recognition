@@ -86,12 +86,11 @@ class GenderDataset(torch.utils.data.Dataset):
 
 class AgeDataset(torch.utils.data.Dataset):
     """
-
     There are in in total of three datasets available. They are Adience, wiki,
     and imdb. wiki and imdb often go togther so basically only two datasets
     should be considered (Adience and imdb_wiki)
 
-    You should extract the arcface 512-D face feature vectors. If you haven't,
+    You should extract the 512-D face feature vectors. If you haven't,
     go read README.md first.
 
     Note that Adience is loaded differently from imdb_wiki since Adience
@@ -106,18 +105,21 @@ class AgeDataset(torch.utils.data.Dataset):
                  test_cross_val: int = None, num_classes: int = None, limit_data: int = None):
         logging.info(f"test cross val is {test_cross_val}")
 
-        if num_classes == 8:
-            self.age_map = {1.0: 0, 5.0: 1, 10.0: 2, 17.5: 3, 28.5: 4,
+        if num_classes == 5:
+            self.age_map = {0: 0, 7: 1, 15: 2, 35: 3, 75: 4}
+        elif num_classes == 8:
+            self.age_map = {0: 0, 5.0: 1, 10.0: 2, 17.5: 3, 28.5: 4,
                             40.5: 5, 50.5: 6, 80.0: 7}
         elif num_classes == 101:
             self.age_map = {i: i for i in range(101)}
         elif num_classes == 1:
-            logging.warning("You are to solve a regression task, instead of "
-                            "classification. I've tried this already and it "
+            logging.warning("Attempting a regression task instead of "
+                            "classification. Discouraged as previous exps show it "
                             "doesn't perform so well.")
             self.age_map = None
         else:
-            raise ValueError
+            raise NotImplementedError(
+                f"num_classes {num_classes} for ages not implemented.")
 
         if dataset == 'Adience':
             data = np.load(os.path.join(data_dir, "Adience/data-aligned.npy"),

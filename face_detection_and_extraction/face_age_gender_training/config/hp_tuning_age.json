@@ -10,7 +10,7 @@
   "lr": [1e-6, 1e-1],
   "weight_decay": [1e-6, 1e-1],
   "gamma": [1e-6, 1],
-  "data_dir": "../data",
+  "data_dir": "/home/ABSOLUTE_PATH/data",
   "cpus": 8,
   "dataset": "wiki",
   "num_samples": 100,

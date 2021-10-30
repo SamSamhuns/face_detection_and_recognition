@@ -1,5 +1,5 @@
 {
-    "name": "ResMLP",
+    "name": "ResMLP_age",
     "n_gpu": 1,
     "amp": true,
     "checkpoint": null,

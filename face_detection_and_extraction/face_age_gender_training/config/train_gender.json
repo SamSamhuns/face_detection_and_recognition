@@ -7,8 +7,8 @@
         "type": "ResMLP",
         "args": {
             "dropout": 0.05,
-            "num_residuals_per_block": 1,
-            "num_blocks": 2,
+            "num_residuals_per_block": 3,
+            "num_blocks": 3,
             "num_classes": 2,
             "num_initial_features": 512,
             "add_residual": true,
@@ -41,7 +41,7 @@
     "lr_scheduler": {
         "type": "ExponentialLR",
         "args": {
-            "gamma": 0.3947943239814273
+            "gamma": 0.1259596562451678
         }
     },
     "trainer": {

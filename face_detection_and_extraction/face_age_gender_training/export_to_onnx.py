@@ -47,9 +47,9 @@ def onnx_export(args):
 
     in_shape = list(map(int, args.input_shape))
     dummy_input = torch.ones(in_shape).to(device)
+    torch_out = model(dummy_input)  # dry run
     if args.verbose:
         print("Pytorch test run:")
-        torch_out = model(dummy_input)  # dry run
         print(f"\ttorch input shape: {dummy_input.shape}")
         print(f"\ttorch output shape: {torch_out.shape}")
 

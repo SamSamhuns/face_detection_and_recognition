@@ -73,50 +73,6 @@ def conv_strides_to_anchors(pred, device="cpu"):
     return torch.cat(z, 1)
 
 
-def disp_output(detections, cv2_img, threshold, model_in_HW, line_thickness=None, text_bg_alpha=0.0):
-    # plot detections and disp image
-    labels = detections[..., -1].numpy()
-    boxs = detections[..., :4].numpy()
-    confs = detections[..., 4].numpy()
-
-    mh, mw = model_in_HW
-    h, w = cv2_img.shape[:2]
-    boxs[:, :] = scale_coords((mh, mw), boxs[:, :], (h, w)).round()
-    tl = line_thickness or round(0.002 * (w + h) / 2) + 1
-    for i, box in enumerate(boxs):
-        if confs[i] >= threshold:
-            x1, y1, x2, y2 = map(int, box)
-            np.random.seed(int(labels[i]) + 2020)
-            color = [np.random.randint(0, 255), 0, np.random.randint(0, 255)]
-            cv2.rectangle(cv2_img, (x1, y1), (x2, y2), color, thickness=max(
-                int((w + h) / 600), 1), lineType=cv2.LINE_AA)
-            label = '%s %.2f' % (int(labels[i]), confs[i])
-            t_size = cv2.getTextSize(
-                label, 0, fontScale=tl / 3, thickness=1)[0]
-            c2 = x1 + t_size[0] + 3, y1 - t_size[1] - 5
-            if text_bg_alpha == 0.0:
-                cv2.rectangle(cv2_img, (x1 - 1, y1), c2,
-                              color, cv2.FILLED, cv2.LINE_AA)
-            else:
-                # Transparent text background
-                alphaReserve = text_bg_alpha  # 0: opaque 1: transparent
-                BChannel, GChannel, RChannel = color
-                xMin, yMin = int(x1 - 1), int(y1 - t_size[1] - 3)
-                xMax, yMax = int(x1 + t_size[0]), int(y1)
-                cv2_img[yMin:yMax, xMin:xMax, 0] = cv2_img[yMin:yMax,
-                                                           xMin:xMax, 0] * alphaReserve + BChannel * (1 - alphaReserve)
-                cv2_img[yMin:yMax, xMin:xMax, 1] = cv2_img[yMin:yMax,
-                                                           xMin:xMax, 1] * alphaReserve + GChannel * (1 - alphaReserve)
-                cv2_img[yMin:yMax, xMin:xMax, 2] = cv2_img[yMin:yMax,
-                                                           xMin:xMax, 2] * alphaReserve + RChannel * (1 - alphaReserve)
-            cv2.putText(cv2_img, label, (x1 + 3, y1 - 4), 0, tl / 3, [255, 255, 255],
-                        thickness=1, lineType=cv2.LINE_AA)
-            print("bbox:", box, "conf:", confs[i],
-                  "class:", int(labels[i]))
-    cv2.imshow("result", cv2_img)
-    cv2.waitKey(0)
-
-
 def w_bbox_iou(box1, box2, x1y1x2y2=True):
     """
     Calculate IOU
@@ -354,9 +310,9 @@ def xywh2xyxy(x):
     return y
 
 
-def get_bboxes_and_confs(detections, det_thres, bbox_area_thres, orig_size, in_size):
+def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in_size):
     """
-    Returns a tuple of bounding boxes and confidence scores
+    Returns a tuple of bounding boxes, bbox confidence scores, and bbox area percentages
     args:
         detections: np.ndarray of fmt [xmin, ymin, xmax, ymax, conf]
         det_thres: float bbox detection threshold
@@ -375,12 +331,12 @@ def get_bboxes_and_confs(detections, det_thres, bbox_area_thres, orig_size, in_s
     bbox_area_perc = 100 * bbox_area / total_area
     detections = detections[bbox_area_perc > bbox_area_thres]
 
-    confs = detections[..., 4].numpy()
+    bbox_confs = detections[..., 4].numpy()
     # rescale detections to orig image size taking the padding into account
     boxes = detections[..., :4].numpy()
     boxes = scale_coords((ih, iw), boxes, (h, w)).round()
 
-    return boxes, confs
+    return boxes, bbox_confs, bbox_area_perc
 
 
 def inference_onnx_model_yolov5_face(net, cv2_img, input_size, official=False, **kwargs):

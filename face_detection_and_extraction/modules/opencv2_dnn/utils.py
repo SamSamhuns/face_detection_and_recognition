@@ -12,9 +12,9 @@ def inference_cv2_model(net, cv2_img, input_size, mean_values):
     return detections[0][0]
 
 
-def get_bboxes_and_confs(detections, det_thres, bbox_area_thres, orig_size, in_size):
+def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in_size):
     """
-    Returns a tuple of bounding boxes and confidence scores
+    Returns a tuple of bounding boxes, bbox confidence scores and bbox area percentages
     """
     w, h = orig_size
     iw, ih = in_size
@@ -28,9 +28,9 @@ def get_bboxes_and_confs(detections, det_thres, bbox_area_thres, orig_size, in_s
     bbox_area_perc = 100 * bbox_area / total_area
     detections = detections[bbox_area_perc > bbox_area_thres]
 
-    confs = detections[:, 2]
+    bbox_confs = detections[:, 2]
     # rescale detections to orig image size taking the padding into account
     boxes = detections[:, 3:7]
     boxes = scale_coords((ih, iw), boxes, (h, w)).round()
 
-    return boxes, confs
+    return boxes, bbox_confs, bbox_area_perc

@@ -17,7 +17,7 @@ from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
 from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
 from modules.yolov5_face.onnx.onnx_utils import check_img_size
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face
-from modules.yolov5_face.onnx.onnx_utils import get_bboxes_and_confs as get_bboxes_and_confs_yolov5
+from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
 from modules.openvino.utils import OVNetwork
 
 today = datetime.today()
@@ -195,7 +195,7 @@ def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, mo
 
     if fext == ".onnx":
         inf_func = inference_onnx_model_yolov5_face
-        bbox_conf_func = get_bboxes_and_confs_yolov5
+        bbox_conf_func = get_bboxes_confs_areas_yolov5
 
     return Net(face_net, feat_net_type, inf_func, bbox_conf_func,
                det_thres, bbox_area_thres, model_in_size, model_out_size)
@@ -262,7 +262,7 @@ def extract_face_img_id_bbox_conf_age_gender_list(net, img):
     if detections is None:  # no faces detected
         return faces, faceids, bboxes, confs, ages, genders
     # obtain bounding boxesx and conf scores
-    boxes, confs = net.bbox_conf_func(
+    boxes, confs, areas = net.bbox_conf_func(
         detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
     tx, ty = -10, -1
     bx, by = 10, 5
@@ -445,9 +445,6 @@ def main():
                         type=str, default="face_data",
                         help="""Target dataset dir path where
                         imgs will be sep into train & test. (default: %(default)s)""")
-    parser.add_argument("--device", default="cpu",
-                        choices=["cpu", "gpu"],
-                        help="Device to inference on. (default: %(default)s)")
     parser.add_argument("-ft", "--face_feat_type", default="FACE_REID_MNV3",
                         choices=["FACE_REID_MNV3", "MOBILE_FACENET"],
                         help="Type of face feature extracter to use for tracking. (default: %(default)s)")

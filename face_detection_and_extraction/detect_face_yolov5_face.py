@@ -5,7 +5,7 @@ import os
 
 from modules.common_utils import get_argparse, get_file_type
 from modules.common_utils import check_img_size, draw_bbox_on_image
-from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_and_confs
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_confs_areas
 
 
 class Net(object):
@@ -57,9 +57,9 @@ def inference_img(net, img, waitKey_val=0):
     if detections is not None:
         iw, ih = net.model_in_size
         h, w = image.shape[:2]
-        boxes, confs = get_bboxes_and_confs(
+        boxes, confs, areas = get_bboxes_confs_areas(
             detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
-        draw_bbox_on_image(image, boxes, confs)
+        draw_bbox_on_image(image, boxes, confs, areas)
 
     cv2.imshow("YOLOv5 face", image)
     cv2.waitKey(waitKey_val)

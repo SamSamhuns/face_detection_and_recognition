@@ -17,7 +17,7 @@ from scipy.io import loadmat
 sys.path.append(".")
 from modules.common_utils import get_argparse, check_img_size
 from modules.common_utils import read_pickle, write_json
-from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_and_confs
+from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_confs_areas
 from modules.mobile_facenet.utils import inference_onnx_model_mobile_facenet as inference_face_feats
 
 today = datetime.today()
@@ -129,7 +129,7 @@ def extract_imdb_wiki_yolov5(dataset_path, net):
 
         iw, ih = net.face_det_in_size
         h, w = image.shape[:2]
-        boxes, confs = get_bboxes_and_confs(
+        boxes, confs, areas = get_bboxes_confs_areas(
             detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
         face_feats = []
         tx, ty = -10, -1
@@ -258,7 +258,7 @@ def clean_imdb_wiki(dataset_path: str, det_score: float = 0.8, bucket_ages=True)
 def main():
     parser = get_argparse(
         description="IMDB-WIKI dataset face and face-feature extraction and cleaning", conflict_handler='resolve')
-    parser.remove_arguments(["model", "prototxt", "input_src"])
+    parser.remove_arguments(["model", "prototxt", "input_src", "device"])
     parser.add_argument("-d", "--dataset_path",
                         default="data/wiki", choices=["data/imdb", "data/wiki"],
                         help="Dataset type. (default: %(default)s)")

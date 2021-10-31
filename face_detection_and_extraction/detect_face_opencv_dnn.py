@@ -3,7 +3,7 @@ import cv2
 import os
 
 from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
-from modules.opencv2_dnn.utils import inference_cv2_model, get_bboxes_and_confs
+from modules.opencv2_dnn.utils import inference_cv2_model, get_bboxes_confs_areas
 
 
 class Net(object):
@@ -64,9 +64,9 @@ def inference_img(net, img, waitKey_val=0):
                                      image,
                                      net.FACE_MODEL_INPUT_SIZE,
                                      net.FACE_MODEL_MEAN_VALUES)
-    boxes, confs = get_bboxes_and_confs(
+    boxes, confs, areas = get_bboxes_confs_areas(
         detections, net.det_thres, net.bbox_area_thres, (w, h), (iw, ih))
-    draw_bbox_on_image(image, boxes, confs)
+    draw_bbox_on_image(image, boxes, confs, areas)
 
     cv2.imshow("opencv_dnn", image)
     cv2.waitKey(waitKey_val)

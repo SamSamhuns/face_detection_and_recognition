@@ -7,15 +7,17 @@ from modules.common_utils import pad_resize_image, scale_coords, draw_bbox_on_im
 
 
 class Net(object):
-    __slots__ = ["face_net", "age_net", "gender_net",
+    __slots__ = ["face_net", "age_net", "gender_net", "det_thres", "bbox_area_thres",
                  "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE",
                  "AGE_GENDER_INPUT_SIZE", "AGE_GENDER_MODEL_MEAN_VALUES",
                  "age_list", "gender_list"]
 
-    def __init__(self, face_net, age_net, gender_net, model_in_size):
+    def __init__(self, face_net, age_net, gender_net, model_in_size, det_thres, bbox_area_thres):
         self.face_net = face_net
         self.age_net = age_net
         self.gender_net = gender_net
+        self.det_thres = det_thres
+        self.bbox_area_thres = bbox_area_thres
         self.FACE_MODEL_INPUT_SIZE = model_in_size  # (width, height)
         self.FACE_MODEL_MEAN_VALUES = [104, 117, 123]
         self.AGE_GENDER_INPUT_SIZE = (227, 227)
@@ -33,6 +35,8 @@ def load_net(facedet_model="weights/opencv_dnn_caffe/res10_300x300_ssd_iter_1400
              gender_proto="weights/gender_net/gender_deploy.prototxt",
              gender_model="weights/gender_net/gender_net.caffemodel",
              model_in_size=(300, 300),
+             det_thres=0.75,
+             bbox_area_thres=0.10,
              device="cpu"):
     """
     Load face detection, age, and gender estimation models
@@ -57,10 +61,11 @@ def load_net(facedet_model="weights/opencv_dnn_caffe/res10_300x300_ssd_iter_1400
         face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         print("Using GPU device")
 
-    return Net(face_net, age_net, gender_net, model_in_size)
+    return Net(
+        face_net, age_net, gender_net, model_in_size, det_thres, bbox_area_thres)
 
 
-def inference_and_get_face_boxes(net, cv2_img, threshold=0.7):
+def inference_and_get_face_boxes(net, cv2_img):
     in_img = cv2_img.copy()
     fh, fw = in_img.shape[:2]
 
@@ -72,18 +77,27 @@ def inference_and_get_face_boxes(net, cv2_img, threshold=0.7):
     detections = net.face_net.forward()[0][0]
 
     h, w = cv2_img.shape[:2]
-    nw, nh = net.FACE_MODEL_INPUT_SIZE
+    mw, mh = net.FACE_MODEL_INPUT_SIZE
     # filter dtections below threshold
-    detections = detections[detections[:, 2] > threshold]
+    detections = detections[detections[:, 2] > net.det_thres]
+    detections[:, 3:7] = detections[:, 3:7] * np.array([mw, mh, mw, mh])
+
+    # only select bboxes with area greater than 0.15% of total area of frame
+    total_area = mw * mh
+    bbox_area = ((detections[:, 5] - detections[:, 3])
+                 * (detections[:, 6] - detections[:, 4]))
+    bbox_area_perc = 100 * bbox_area / total_area
+    detections = detections[bbox_area_perc > net.bbox_area_thres]
+
     # rescale detections to orig image size taking the padding into account
-    boxes = detections[:, 3:7] * np.array([nw, nh, nw, nh])
-    boxes = scale_coords((nh, nw), boxes, (h, w)).round()
+    boxes = detections[:, 3:7]
+    boxes = scale_coords((mh, mw), boxes, (h, w)).round()
     confs = detections[:, 2]
-    draw_bbox_on_image(cv2_img, boxes, confs)
+    draw_bbox_on_image(cv2_img, boxes, confs, bbox_area_perc)
     return cv2_img, boxes
 
 
-def inference_img(net, img, threshold, waitKey_val=0):
+def inference_img(net, img, waitKey_val=0):
     # load the input image and construct an input blob for the image
     # by resizing to a fixed 300x300 pixels and then normalizing it
     if isinstance(img, str):
@@ -97,7 +111,7 @@ def inference_img(net, img, threshold, waitKey_val=0):
         raise Exception("image cannot be read")
 
     frame_face, face_bboxes = inference_and_get_face_boxes(
-        net, image, threshold)
+        net, image)
 
     padding = 20
     for bbox in face_bboxes:
@@ -128,13 +142,13 @@ def inference_img(net, img, threshold, waitKey_val=0):
     cv2.waitKey(waitKey_val)
 
 
-def inference_vid(net, vid, threshold):
+def inference_vid(net, vid):
     cap = cv2.VideoCapture(vid)
     ret, frame = cap.read()
 
     while ret:
         # inference and display the resulting frame
-        inference_img(net, frame, threshold, waitKey_val=5)
+        inference_img(net, frame, waitKey_val=5)
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
         ret, frame = cap.read()
@@ -142,14 +156,13 @@ def inference_vid(net, vid, threshold):
     cv2.destroyAllWindows()
 
 
-def inference_webcam(net, cam_index, threshold):
-    inference_vid(net, cam_index, threshold)
+def inference_webcam(net, cam_index):
+    inference_vid(net, cam_index)
 
 
 def main():
     parser = get_argparse(
         description="OpenCV DNN face detection with age and gender estimation")
-    parser.remove_argument("bbox_area_thres")
     parser.add_argument("--device", default="cpu",
                         choices=["cpu", "gpu"],
                         help="Device to inference on. (default: $(default)s)")
@@ -163,15 +176,17 @@ def main():
     net = load_net(facedet_model=args.model,
                    facedet_proto=args.prototxt,
                    model_in_size=args.input_size,
+                   det_thres=args.det_thres,
+                   bbox_area_thres=args.bbox_area_thres,
                    device=args.device)
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src), args.det_thres)
+        inference_webcam(net, int(args.input_src))
     elif input_type == "video":
-        inference_vid(net, args.input_src, args.det_thres)
+        inference_vid(net, args.input_src)
     elif input_type == "image":
-        inference_img(net, args.input_src, args.det_thres)
+        inference_img(net, args.input_src)
     else:
         print("File type or inference mode not recognized. Use --help")
 

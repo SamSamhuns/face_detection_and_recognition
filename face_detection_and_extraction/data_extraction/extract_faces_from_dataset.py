@@ -15,9 +15,9 @@ from datetime import datetime
 sys.path.append(".")
 from modules.common_utils import get_argparse, fix_path_for_globbing, check_img_size
 from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
-from modules.opencv2_dnn.utils import get_bboxes_and_confs as get_bboxes_confs_cv2
+from modules.opencv2_dnn.utils import get_bboxes_confs_areas as get_bboxes_confs_areas_cv2
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
-from modules.yolov5_face.onnx.onnx_utils import get_bboxes_and_confs as get_bboxes_confs_yolov5
+from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
 
 
 mimetypes.init()
@@ -108,7 +108,7 @@ def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size, model_o
 
     if fext == ".onnx":
         inf_func = inf_yolov5
-        bbox_conf_func = get_bboxes_confs_yolov5
+        bbox_conf_func = get_bboxes_confs_areas_yolov5
     else:
         if device == "cpu":
             face_net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
@@ -118,13 +118,13 @@ def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size, model_o
             face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
             print("Using GPU device")
         inf_func = inf_cv2
-        bbox_conf_func = get_bboxes_confs_cv2
+        bbox_conf_func = get_bboxes_confs_areas_cv2
     return Net(face_net, inf_func, bbox_conf_func,
                det_thres, bbox_area_thres,
                model_in_size, model_out_size)
 
 
-def extract_face_and_conf_list(net, img):
+def extract_face_conf_area_list(net, img):
     """returns a tuple of two lists: cv2 images containing faces, conf of said face dets
     """
     if isinstance(img, str):
@@ -140,7 +140,7 @@ def extract_face_and_conf_list(net, img):
     if detections is None:  # no faces detected
         return [], []
     # obtain bounding boxesx and conf scores
-    boxes, confs = net.bbox_conf_func(
+    boxes, confs, areas = net.bbox_conf_func(
         detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
 
     tx, ty = -6, -1
@@ -160,10 +160,10 @@ def extract_face_and_conf_list(net, img):
         if net.FACE_MODEL_OUTPUT_SIZE is not None:
             face = cv2.resize(face, (net.FACE_MODEL_OUTPUT_SIZE))
         face_list.append(face)
-    return face_list, confs
+    return face_list, confs, areas
 
 
-def save_extracted_faces(media_prefix_name_list, faces_img_list, faces_conf_list, faces_save_dir) -> None:
+def save_extracted_faces(media_prefix_name_list, faces_list, confs_list, areas_list, save_dir) -> None:
     """
     args;
         face_img_list: list of cropped faces as np.ndarray
@@ -171,13 +171,14 @@ def save_extracted_faces(media_prefix_name_list, faces_img_list, faces_conf_list
         class_name: name of class
     """
     total = 0
-    for prefix, face_img_list, face_conf_list in zip(media_prefix_name_list, faces_img_list, faces_conf_list):
+    for prefix, face_list, conf_list, area_list in zip(media_prefix_name_list, faces_list, confs_list, areas_list):
         i = 0
-        for face_img, face_conf in zip(face_img_list, face_conf_list):
+        for face, conf, area in zip(face_list, conf_list, area_list):
             i += 1
-            face_conf = round(face_conf, 3)
+            conf = str(round(conf, 2)).replace('.', '_')
+            area = str(round(area, 2)).replace('.', '_')
             cv2.imwrite(
-                f"{faces_save_dir}/{prefix}_face_{i}_conf_{str(face_conf).replace('.', '_')}.jpg", face_img)
+                f"{save_dir}/{prefix}_face_{i}_conf_{conf}_area_{area}.jpg", face)
         total += i
     return total
 
@@ -203,14 +204,17 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
 
             faces_img_list = []
             faces_conf_list = []
+            faces_area_list = []
             media_prefix_name_list = []
             media_root = os.path.basename(media_path).split('.')[0]
             mtype = get_img_vid_media_type(media_path)
             if mtype == "image":
                 media_prefix_name_list.append(media_root)
-                faces, confs = extract_face_and_conf_list(net, media_path)
+                faces, confs, areas = extract_face_conf_area_list(
+                    net, media_path)
                 faces_img_list.append(faces)
                 faces_conf_list.append(confs)
+                faces_area_list.append(areas)
             elif mtype == "video":
                 # save faces from videos inside sub dirs if flag is set
                 if SAVE_VIDEO_FACES_IN_SUBDIRS:
@@ -235,22 +239,24 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
                         mprefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
                         media_prefix_name_list.append(
                             mprefix + f"sec_{i//step}_")
-                        faces, confs = extract_face_and_conf_list(net, frame)
+                        faces, confs, areas = extract_face_conf_area_list(
+                            net, frame)
                         faces_img_list.append(faces)
                         faces_conf_list.append(confs)
+                        faces_area_list.append(areas)
                     ret, frame = cap.read()
                 cap.release()
                 cv2.destroyAllWindows()
 
             faces_extracted = save_extracted_faces(
-                media_prefix_name_list, faces_img_list, faces_conf_list, faces_save_dir)
+                media_prefix_name_list, faces_img_list, faces_conf_list, faces_area_list, faces_save_dir)
             total_faces += faces_extracted
         logging.info(f"{total_faces} faces extracted for class {class_name}")
 
 
 def main():
     parser = get_argparse(description="Dataset face extraction")
-    parser.remove_argument("input_src")
+    parser.remove_arguments(["input_src", "device"])
     parser.add_argument('-rd', '--raw_datadir_path',
                         type=str, required=True,
                         help="""Raw dataset dir path with
@@ -259,9 +265,6 @@ def main():
                         type=str, default="face_data",
                         help="""Target dataset dir path where
                         imgs will be sep into train & test. (default: %(default)s)""")
-    parser.add_argument("--device", default="cpu",
-                        choices=["cpu", "gpu"],
-                        help="Device to inference on. (default: %(default)s)")
     parser.add_argument("-is", "--input_size",
                         nargs=2,
                         default=(300, 400),

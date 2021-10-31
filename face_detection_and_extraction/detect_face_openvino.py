@@ -4,7 +4,7 @@ import os
 
 from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
 from modules.openvino.utils import OVNetwork
-from modules.opencv2_dnn.utils import get_bboxes_and_confs
+from modules.opencv2_dnn.utils import get_bboxes_confs_areas
 
 
 def inference_img(net, img, waitKey_val=0):
@@ -24,10 +24,9 @@ def inference_img(net, img, waitKey_val=0):
     ih, iw = net.in_shape[2:4]
     # pass the image through the network to obtain the detections
     detections = net.inference_img(image)[0][0]
-    boxes, confs = get_bboxes_and_confs(detections,
-                                        net.det_thres, net.bbox_area_thres,
-                                        (w, h), (iw, ih))
-    draw_bbox_on_image(image, boxes, confs)
+    boxes, confs, areas = get_bboxes_confs_areas(
+        detections, net.det_thres, net.bbox_area_thres, (w, h), (iw, ih))
+    draw_bbox_on_image(image, boxes, confs, areas)
 
     cv2.imshow("openvino", image)
     cv2.waitKey(waitKey_val)

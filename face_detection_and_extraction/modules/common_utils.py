@@ -70,8 +70,11 @@ def get_argparse(*args, **kwargs):
                         type=float, default=0.75,
                         help='score to filter weak detections. (default: %(default)s)')
     parser.add_argument("-at", "--bbox_area_thres",
-                        type=float, default=0.15,
+                        type=float, default=0.10,
                         help='score to filter bboxes that cover small area perc. (default: %(default)s)')
+    parser.add_argument("--device", default="cpu",
+                        choices=["cpu", "gpu"],
+                        help="Device to inference on. (default: %(default)s)")
 
     return parser
 
@@ -229,27 +232,46 @@ def calculate_bbox_iou(bbox1, bbox2):
     return iou
 
 
-def draw_bbox_on_image(cv2_img, boxes, confs):
+def draw_bbox_on_image(cv2_img, boxes, bbox_confs, bbox_areas, line_thickness=None, text_bg_alpha=0.5):
     """
     Draw bboxes on cv2 image
         boxes must be 2D list/np array of coords xmin, ymin, xmax, ymax foreach bbox
         confs must be 2D list of confidences foreach corresponding bbox
     """
     h, w = cv2_img.shape[:2]
-    tl = round(0.002 * (w + h) / 2) + 1
+    tl = line_thickness or round(0.002 * (w + h) / 2) + 1
 
     for i, box in enumerate(boxes):
-        label = f"{confs[i]:.2f}"
+        if bbox_areas is None:
+            label = f"{bbox_confs[i]:.2f}"
+        else:
+            label = f"{bbox_confs[i]:.2f}_{bbox_areas[i]:.2f}"
         # draw bbox on image
         xmin, ymin, xmax, ymax = map(int, box)
         cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=max(
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
+
+        # draw rect covring text
         t_size = cv2.getTextSize(
             label, 0, fontScale=tl / 3, thickness=1)[0]
-        # draw label text along with text bg rect
         c2 = xmin + t_size[0] + 3, ymin - t_size[1] - 5
-        cv2.rectangle(cv2_img, (xmin - 1, ymin), c2,
-                      (0, 0, 255), cv2.FILLED, cv2.LINE_AA)
+        color = (0, 0, 0)
+        if text_bg_alpha == 0.0:
+            cv2.rectangle(cv2_img, (xmin - 1, ymin), c2,
+                          color, cv2.FILLED, cv2.LINE_AA)
+        else:
+            # Transparent text background
+            alphaReserve = text_bg_alpha  # 0: opaque 1: transparent
+            BChannel, GChannel, RChannel = color
+            xMin, yMin = int(xmin - 1), int(ymin - t_size[1] - 3)
+            xMax, yMax = int(xmin + t_size[0]), int(ymin)
+            cv2_img[yMin:yMax, xMin:xMax, 0] = cv2_img[yMin:yMax,
+                                                       xMin:xMax, 0] * alphaReserve + BChannel * (1 - alphaReserve)
+            cv2_img[yMin:yMax, xMin:xMax, 1] = cv2_img[yMin:yMax,
+                                                       xMin:xMax, 1] * alphaReserve + GChannel * (1 - alphaReserve)
+            cv2_img[yMin:yMax, xMin:xMax, 2] = cv2_img[yMin:yMax,
+                                                       xMin:xMax, 2] * alphaReserve + RChannel * (1 - alphaReserve)
+        # draw label text
         cv2.putText(cv2_img, label, (xmin + 3, ymin - 4), 0, tl / 3, [255, 255, 255],
                     thickness=1, lineType=cv2.LINE_AA)
 

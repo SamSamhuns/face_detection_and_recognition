@@ -190,6 +190,43 @@ class AgeDataset(torch.utils.data.Dataset):
         return x, y
 
 
+class VideoFeatDataset(torch.utils.data.Dataset):
+    """
+    Dataset for features extracted from video.
+    Zero padding is used to ensure all videos have the same number of features.
+    Features from videos are extracted as follows: 'num of faces' * 'face feature dimension' * 'num of frames in video'
+    eg. 5*512*30=76800, 5*512*20=51200, 4*512*20=40960
+    """
+
+    def __init__(self, data_dir: str = 'data', dataset: str = None,
+                 training: bool = True, limit_data: int = None):
+
+        if dataset.lower() == 'custom_video':
+            data = np.load(os.path.join(data_dir, f"{dataset.lower()}/data.npy"),
+                           allow_pickle=True)
+        else:
+            raise NotImplementedError(f"{dataset} is not implemented.")
+
+        if limit_data is not None:
+            logging.info(
+                f"reducing data samples from {len(data)} to {len(data[:limit_data])} ...")
+            random.shuffle(data)
+            self.data = data[:limit_data]
+        else:
+            self.data = data
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, idx: int) -> tuple:
+        """
+        Return an feature and a target label (video classification).
+        """
+        x = self.data[idx]['feature']
+        y = self.data[idx]['label']
+        return x, y
+
+
 class GenderDataLoader(BaseDataLoader):
     """
     Note that this data loader class is sub-classes the BaseDataLoader class,
@@ -228,3 +265,16 @@ class AgeDataLoader(BaseDataLoader):
                                   limit_data=limit_data)
         super().__init__(self.dataset, batch_size, shuffle, validation_split,
                          num_workers)
+
+
+class VideoFeatDataLoader(BaseDataLoader):
+    """
+    DataLoader for Video Feats
+    """
+
+    def __init__(self, data_dir: str, batch_size: int, shuffle: bool, validation_split: float,
+                 num_workers: int, dataset: str, num_classes: int, training: bool, limit_data: int = None):
+
+        self.dataset = VideoFeatDataset(
+            data_dir=data_dir, dataset=dataset, limit_data=limit_data)
+        super().__init__(self.dataset, batch_size, shuffle, validation_split, num_workers)

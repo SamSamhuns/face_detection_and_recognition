@@ -11,6 +11,7 @@
             "num_blocks": 3,
             "num_classes": 2,
             "num_initial_features": 512,
+            "reduce_in_features": null,
             "add_residual": true,
             "add_IC": true
         }

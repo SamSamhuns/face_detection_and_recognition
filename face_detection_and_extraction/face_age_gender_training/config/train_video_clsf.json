@@ -1,5 +1,5 @@
 {
-    "name": "ResMLP_age",
+    "name": "ResMLP_video_clsf",
     "n_gpu": 1,
     "amp": true,
     "checkpoint": null,
@@ -9,23 +9,23 @@
             "dropout": 0.05,
             "num_residuals_per_block": 1,
             "num_blocks": 4,
-            "num_classes": 5,
-            "num_initial_features": 512,
-            "reduce_in_features": null,
+            "num_classes": 14,
+            "num_initial_features": 40960,
+            "reduce_in_features": 1024,
             "add_residual": true,
             "add_IC": true
         }
     },
     "data_loader": {
-        "type": "AgeDataLoader",
+        "type": "VideoFeatDataLoader",
         "args": {
             "data_dir": "../data/",
             "batch_size": 128,
             "shuffle": true,
             "validation_split": 0,
             "num_workers": 8,
-            "dataset": "wiki",
-            "num_classes": 5
+            "dataset": "custom_video",
+            "num_classes": 14
         }
     },
     "optimizer": {

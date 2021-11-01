@@ -51,7 +51,6 @@ class Residual(nn.Module):
             out += identity
 
         out = self.relu2(out)
-
         return out
 
 
@@ -85,7 +84,6 @@ class DownSample(nn.Module):
             out = self.dropout(out)
         out = self.linear(out)
         out = self.relu(out)
-
         return out
 
 
@@ -99,19 +97,25 @@ class ResMLP(BaseModel):
     """
 
     def __init__(self, dropout: float, num_residuals_per_block: int, num_blocks: int, num_classes: int,
-                 num_initial_features: int, add_residual: bool = True, add_IC: bool = True):
+                 num_initial_features: int, reduce_in_features: int, add_residual: bool = True, add_IC: bool = True):
         super().__init__()
 
         blocks = []
+        # input feature space reduction layer, acts as encoder layer
+        # if reduce_feat_num is not None, reduce input features with downsampling instead of residual block
+        if reduce_in_features is not None:
+            blocks.append(DownSample(
+                num_initial_features, reduce_in_features // 2, dropout, add_IC))
+        else:
+            reduce_in_features = num_initial_features
 
         for i in range(num_blocks):
             blocks.extend(self._create_block(
-                num_initial_features, dropout, num_residuals_per_block, add_residual, add_IC, i))
-            num_initial_features //= 2
+                reduce_in_features, dropout, num_residuals_per_block, add_residual, add_IC, i))
+            reduce_in_features //= 2
 
-        # last classiciation layer
-        blocks.append(nn.Linear(num_initial_features, num_classes))
-
+        # last classification layer
+        blocks.append(nn.Linear(reduce_in_features, num_classes))
         self.blocks = nn.Sequential(*blocks)
 
     def _create_block(self, in_features: int, dropout: float,
@@ -123,7 +127,6 @@ class ResMLP(BaseModel):
                                   add_residual, add_IC, i, j))
         block.append(DownSample(
             in_features, in_features // 2, dropout, add_IC))
-
         return block
 
     def forward(self, x: torch.tensor) -> torch.Tensor:

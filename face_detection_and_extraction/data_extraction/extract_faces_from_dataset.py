@@ -256,7 +256,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
 
 def main():
     parser = get_argparse(description="Dataset face extraction")
-    parser.remove_arguments(["input_src", "device"])
+    parser.remove_argument("input_src")
     parser.add_argument('-rd', '--raw_datadir_path',
                         type=str, required=True,
                         help="""Raw dataset dir path with

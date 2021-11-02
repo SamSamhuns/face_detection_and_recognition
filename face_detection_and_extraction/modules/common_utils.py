@@ -61,10 +61,10 @@ def get_argparse(*args, **kwargs):
                              "\t VIDEO_MODE       -i <PATH_TO_VID>\n" +
                              "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n")
     parser.add_argument("-m", "--model",
-                        default="weights/face-detection-caffe/res10_300x300_ssd_iter_140000.caffemodel",
+                        default="weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
                         help='Path to model file. (default: %(default)s)')
     parser.add_argument("-p", "--prototxt",
-                        default="weights/face-detection-caffe/deploy.prototxt.txt",
+                        default="weights/face_detection_caffe/deploy.prototxt.txt",
                         help="Path to 'deploy' prototxt file. (default: %(default)s)")
     parser.add_argument("-dt", "--det_thres",
                         type=float, default=0.75,
@@ -72,7 +72,7 @@ def get_argparse(*args, **kwargs):
     parser.add_argument("-at", "--bbox_area_thres",
                         type=float, default=0.10,
                         help='score to filter bboxes that cover small area perc. (default: %(default)s)')
-    parser.add_argument("--device", default="cpu",
+    parser.add_argument('-d', "--device", default="cpu",
                         choices=["cpu", "gpu"],
                         help="Device to inference on. (default: %(default)s)")
 

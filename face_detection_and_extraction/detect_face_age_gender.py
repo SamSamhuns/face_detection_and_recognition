@@ -28,12 +28,12 @@ class Net(object):
         self.gender_list = ['Male', 'Female']
 
 
-def load_net(facedet_model="weights/opencv_dnn_caffe/res10_300x300_ssd_iter_140000.caffemodel",
-             facedet_proto="weights/opencv_dnn_caffe/deploy.prototxt.txt",
-             age_proto="weights/age_net/age_deploy.prototxt",
-             age_model="weights/age_net/age_net.caffemodel",
-             gender_proto="weights/gender_net/gender_deploy.prototxt",
-             gender_model="weights/gender_net/gender_net.caffemodel",
+def load_net(facedet_model="weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
+             facedet_proto="weights/face_detection_caffe/deploy.prototxt.txt",
+             age_proto="weights/age_net_caffe/age_deploy.prototxt",
+             age_model="weights/age_net_caffe/age_net.caffemodel",
+             gender_proto="weights/gender_net_caffe/gender_deploy.prototxt",
+             gender_model="weights/gender_net_caffe/gender_net.caffemodel",
              model_in_size=(300, 300),
              det_thres=0.75,
              bbox_area_thres=0.10,
@@ -136,8 +136,8 @@ def inference_img(net, img, waitKey_val=0):
 
         gender_age_label = f"{gender}:{gender_preds[0].max():.2f}," + \
                            f"{age}:{age_preds[0].max():.2f}"
-        cv2.putText(frame_face, gender_age_label, (bbox[0], bbox[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(frame_face, gender_age_label, (bbox[0], bbox[1] - 25),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1, cv2.LINE_AA)
     cv2.imshow("output", frame_face)
     cv2.waitKey(waitKey_val)
 
@@ -163,9 +163,6 @@ def inference_webcam(net, cam_index):
 def main():
     parser = get_argparse(
         description="OpenCV DNN face detection with age and gender estimation")
-    parser.add_argument("--device", default="cpu",
-                        choices=["cpu", "gpu"],
-                        help="Device to inference on. (default: $(default)s)")
     parser.add_argument("-is", "--input_size",
                         default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')

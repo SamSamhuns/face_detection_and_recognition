@@ -134,9 +134,6 @@ def batch_inference_img(net, cv2_img):
 
 def main():
     parser = get_argparse(description="OpenCV DNN face detection")
-    parser.add_argument("--device", default="cpu",
-                        choices=["cpu", "gpu"],
-                        help="Device to inference on. (default: $(default)s)")
     parser.add_argument("-is", "--input_size",
                         default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')

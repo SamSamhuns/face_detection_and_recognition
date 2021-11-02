@@ -1,6 +1,6 @@
 import json
+import glob
 import pickle
-import logging
 from pathlib import Path
 from itertools import repeat
 from datetime import datetime
@@ -9,7 +9,6 @@ from collections import OrderedDict
 import torch
 import numpy as np
 import pandas as pd
-from PIL import Image
 from scipy.io import loadmat
 
 
@@ -104,12 +103,6 @@ def get_original_lm(lm: np.ndarray, image_size_original: tuple, image_size_new: 
     return lm_new
 
 
-def ensure_dir(dirname):
-    dirname = Path(dirname)
-    if not dirname.is_dir():
-        dirname.mkdir(parents=True, exist_ok=False)
-
-
 def read_json(fname):
     fname = Path(fname)
     with fname.open('rt') as handle:
@@ -172,52 +165,6 @@ class MetricTracker:
         return dict(self._data.average)
 
 
-def choose_one_face(image_path: str, list_of_fdr: list, method: str = 'center'):
-    logging.debug(f"number of faces is {len(list_of_fdr)}")
-
-    if method == 'biggest':
-        bbox_size = [fdr['bbox'] for fdr in list_of_fdr]
-        bbox_size = [(bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
-                     for bbox in bbox_size]
-        idx = np.argmax(bbox_size)
-        fdr = list_of_fdr[idx]
-
-    elif method == 'center':
-        img = Image.open(image_path)
-        width, height = img.size
-        image_center = height // 2, width // 2
-        bbox_centers = [fdr['bbox'] for fdr in list_of_fdr]
-        bbox_centers = [((bbox[2] + bbox[0]) // 2, (bbox[3] - bbox[1]) // 2)
-                        for bbox in bbox_centers]
-        logging.debug(f"{bbox_centers}, {image_center}")
-        dists = [np.linalg.norm(np.array(bbox) - np.array(image_center))
-                 for bbox in bbox_centers]
-        idx = np.argmin(dists)
-        fdr = list_of_fdr[idx]
-    else:
-        raise ValueError
-
-    return fdr
-
-
-def get_nearest_number(query: float, predefined: list = [28.5, 40.5, 5.0, 80.0, 17.5, 50.5, 10.0, 1.0]):
-    # possible ages
-    # 28.5
-    # 40.5
-    # 5.0
-    # 80.0
-    # 17.5
-    # 50.5
-    # 10.0
-    # 1.0
-    if query is None:
-        return query
-    diffs = [np.abs(query - pre) for pre in predefined]
-    idx = np.argmin(diffs)
-
-    return predefined[idx]
-
-
 def calc_age(taken, dob):
     """Copied from
     https://github.com/yu4u/age-gender-estimation/blob/master/src/utils.py
@@ -256,3 +203,13 @@ def load_data(mat_path):
     d = loadmat(mat_path)
 
     return d["image"], d["gender"][0], d["age"][0], d["db"][0], d["img_size"][0, 0], d["min_score"][0, 0]
+
+
+def recursively_get_file_paths(root_dir, ext="npy"):
+    """
+    Get file paths recursively in the 'root_dir' with the extension 'ext'
+    """
+    fpaths = []
+    for fpath in glob.glob(f"{root_dir}/**/*.{ext}", recursive=True):
+        fpaths.append(fpath)
+    return fpaths

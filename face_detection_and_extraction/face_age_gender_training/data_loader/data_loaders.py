@@ -5,6 +5,7 @@ import logging
 import torch
 import numpy as np
 from base import BaseDataLoader
+from utils import recursively_get_file_paths
 
 
 class GenderDataset(torch.utils.data.Dataset):
@@ -201,30 +202,30 @@ class VideoFeatDataset(torch.utils.data.Dataset):
     def __init__(self, data_dir: str = 'data', dataset: str = None,
                  training: bool = True, limit_data: int = None):
 
-        if dataset.lower() == 'custom_video':
-            data = np.load(os.path.join(data_dir, f"{dataset.lower()}/data.npy"),
-                           allow_pickle=True)
+        if dataset == 'custom_video':
+            data_paths = recursively_get_file_paths(os.path.join(data_dir, dataset))
         else:
             raise NotImplementedError(f"{dataset} is not implemented.")
 
         if limit_data is not None:
             logging.info(
-                f"reducing data samples from {len(data)} to {len(data[:limit_data])} ...")
-            random.shuffle(data)
-            self.data = data[:limit_data]
+                f"reducing data samples from {len(data_paths)} to {len(data_paths[:limit_data])} ...")
+            random.shuffle(data_paths)
+            self.data_paths = data_paths[:limit_data]
         else:
-            self.data = data
+            self.data_paths = data_paths
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.data_paths)
 
     def __getitem__(self, idx: int) -> tuple:
         """
         Return an feature and a target label (video classification).
         """
-        x = self.data[idx]['feature']
-        y = self.data[idx]['label']
-        return x, y
+        data = np.load(self.data_paths[idx], allow_pickle=True)
+        X = data.item().get('feature')
+        y = data.item().get('label')
+        return X, y
 
 
 class GenderDataLoader(BaseDataLoader):

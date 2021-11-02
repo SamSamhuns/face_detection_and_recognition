@@ -98,8 +98,8 @@ class Net(object):
                 "weights/mobile_facenet/mobile_facenet.onnx")
         elif feat_net_type == "FACE_REID_MNV3":
             self.feature_net = OVNetwork(
-                xml_path="weights/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.xml",
-                bin_path="weights/face-reidentification-retail-0095/FP32/face-reidentification-retail-0095.bin",
+                xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
+                bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
                 det_thres=None, bbox_area_thres=None)
         else:
             raise NotImplementedError(
@@ -333,6 +333,11 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
         media_root: root name of media file
         save_dir: dir where face imgs are saved in class dirs
     """
+    target_dir = save_dir.split('/')[0]
+    class_name = save_dir.split('/')[1]
+    faces_savedir = os.path.join(target_dir, "faces", class_name)
+    os.makedirs(faces_savedir, exist_ok=True)
+
     annot_dict = {"media_id": media_root, "frames_info": []}
     total = 0
     for img in frames_faces_obj_list:  # for each frame
@@ -352,12 +357,12 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
             i += 1
             conf = str(round(conf, 3)).replace('.', '_')
             fname = f"{prefix}_frame_{frame_num}_sec_{time_sec}_id_{id}_conf_{conf}_{gender}_{age}.jpg"
-            cv2.imwrite(f"{save_dir}/{fname}", face)
+            cv2.imwrite(f"{faces_savedir}/{fname}", face)
         total += i
 
-    target_dir = save_dir.split('/')[0]
-    class_name = save_dir.split('/')[1]
-    pkl_fpath = os.path.join(target_dir, class_name, media_root + ".pkl")
+    pkl_savedir = os.path.join(target_dir, "pkl", class_name)
+    os.makedirs(pkl_savedir, exist_ok=True)
+    pkl_fpath = os.path.join(pkl_savedir, media_root + ".pkl")
     with open(pkl_fpath, 'wb') as fptr:
         annot_dict["class_name"] = class_name
         annot_dict["media_url"] = ROOT_URL + media_root
@@ -366,7 +371,6 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
 
 
 def filter_faces_from_data(raw_img_dir, target_dir, net):
-    os.makedirs(target_dir, exist_ok=True)
     class_dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
 
     # for each class in raw data
@@ -382,7 +386,6 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
         for media_path in file_path_list:
             # create dir for saving faces per class
             faces_save_dir = os.path.join(target_dir, class_name)
-            os.makedirs(faces_save_dir, exist_ok=True)
 
             frames_faces_obj_list = []
             media_root = os.path.basename(media_path).split('.')[0]
@@ -401,7 +404,6 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
                         print(
                             f"Skipping {faces_save_dir} as it already exists.")
                         continue
-                    os.makedirs(faces_save_dir, exist_ok=True)
 
                 cap = cv2.VideoCapture(media_path)
                 # take 1 frame per sec

@@ -328,7 +328,7 @@ def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in
     total_area = iw * ih
     bbox_area = ((detections[:, 2] - detections[:, 0])
                  * (detections[:, 3] - detections[:, 1]))
-    bbox_area_perc = 100 * bbox_area / total_area
+    bbox_area_perc = (100 * bbox_area / total_area).numpy()
     detections = detections[bbox_area_perc > bbox_area_thres]
 
     bbox_confs = detections[..., 4].numpy()

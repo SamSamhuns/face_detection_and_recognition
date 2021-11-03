@@ -1,6 +1,5 @@
 import time
 
-import cv2
 import torch
 import torchvision
 import numpy as np

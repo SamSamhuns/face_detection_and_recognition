@@ -70,7 +70,7 @@ def get_argparse(*args, **kwargs):
                         type=float, default=0.75,
                         help='score to filter weak detections. (default: %(default)s)')
     parser.add_argument("-at", "--bbox_area_thres",
-                        type=float, default=0.10,
+                        type=float, default=0.15,
                         help='score to filter bboxes that cover small area perc. (default: %(default)s)')
     parser.add_argument('-d', "--device", default="cpu",
                         choices=["cpu", "gpu"],
@@ -246,8 +246,9 @@ def draw_bbox_on_image(cv2_img, boxes, bbox_confs, bbox_areas, line_thickness=No
             label = f"{bbox_confs[i]:.2f}"
         else:
             label = f"{bbox_confs[i]:.2f}_{bbox_areas[i]:.2f}"
-        # draw bbox on image
         xmin, ymin, xmax, ymax = map(int, box)
+        xmin, ymin, xmax, ymax = max(xmin, 0), max(ymin, 0), min(xmax, w), min(ymax, h)
+        # draw bbox on image
         cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=max(
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
 

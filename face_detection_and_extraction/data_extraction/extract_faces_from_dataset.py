@@ -33,6 +33,8 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
 
 SAVE_VIDEO_FACES_IN_SUBDIRS = True
 CLASS_NAME_TO_LABEL_DICT = read_pickle("data/sample/class_name_to_label.pkl")
+# size of features from one face
+FACE_FEATURE_SIZE = 256
 # max number of faces to consider from each frame for feat ext
 MAX_N_FACES_PER_FRAME = 5
 # max number of frames from which faces are extracted
@@ -217,7 +219,7 @@ def extract_face_feat_conf_area_list(net, img):
     return face_list, feat_list, confs, areas
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=True, faces_per_frame=4, feat_sz=256) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=True) -> None:
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
@@ -239,10 +241,12 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
         faces, confs, areas = img.faces, img.confs, img.areas
 
         if save_feat:
-            feats = img.feats[:faces_per_frame]
-            if len(feats) < faces_per_frame:  # zero-pad if num of faces less than faces_per_frame
-                face_diff = faces_per_frame - len(feats)
-                feats.extend([np.zeros(feat_sz) for _ in range(face_diff)])
+            feats = img.feats[:MAX_N_FACES_PER_FRAME]
+            # zero-pad if num of faces less than faces_per_frame
+            if len(feats) < MAX_N_FACES_PER_FRAME:
+                face_diff = MAX_N_FACES_PER_FRAME - len(feats)
+                feats.extend([np.zeros(FACE_FEATURE_SIZE)
+                              for _ in range(face_diff)])
             feats_list.extend(feats)
 
         single_frame_info = {"frame_num": frame_num,
@@ -257,7 +261,8 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
             cv2.imwrite(f"{faces_savedir}/{fname}", face)
         total += i
 
-    np_savedir = os.path.join(target_dir, f"npy_feat_{feat_sz}", class_name)
+    np_savedir = os.path.join(
+        target_dir, f"npy_feat_{FACE_FEATURE_SIZE}", class_name)
     os.makedirs(np_savedir, exist_ok=True)
     np_savepath = os.path.join(np_savedir, media_root + ".npy")
     annot_dict["class_name"] = class_name
@@ -265,8 +270,8 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
     if save_feat:
         if len(frames_faces_obj_list) < MAX_N_FRAME_FROM_VID:
             frame_diff = MAX_N_FRAME_FROM_VID - len(frames_faces_obj_list)
-            feats_list.extend([np.zeros(feat_sz)
-                               for _ in range(faces_per_frame)] * frame_diff)
+            feats_list.extend([np.zeros(FACE_FEATURE_SIZE)
+                               for _ in range(MAX_N_FACES_PER_FRAME)] * frame_diff)
         annot_dict["feature"] = np.concatenate(feats_list, axis=0)
     np.save(np_savepath, annot_dict)
 
@@ -327,7 +332,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
                 cv2.destroyAllWindows()
 
             faces_extracted = save_extracted_faces(
-                frames_faces_obj_list, media_root, save_dir=faces_save_dir, faces_per_frame=MAX_N_FACES_PER_FRAME)
+                frames_faces_obj_list, media_root, save_dir=faces_save_dir)
             total_faces += faces_extracted
         logging.info(f"{total_faces} faces extracted for class {class_name}")
 

@@ -219,7 +219,7 @@ def extract_face_feat_conf_area_list(net, img):
     return face_list, feat_list, confs, areas
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=True) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_face, save_feat) -> None:
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
@@ -228,8 +228,9 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
     """
     target_dir = save_dir.split('/')[0]
     class_name = save_dir.split('/')[1]
-    faces_savedir = os.path.join(target_dir, "faces", class_name)
-    os.makedirs(faces_savedir, exist_ok=True)
+    if save_face:
+        faces_savedir = os.path.join(target_dir, "faces", class_name)
+        os.makedirs(faces_savedir, exist_ok=True)
 
     annot_dict = {"media_id": media_root, "frames_info": []}
     total = 0
@@ -256,9 +257,10 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
         # for each detected face
         for face, conf, area in zip(faces, confs, areas):
             i += 1
-            conf = str(round(conf, 3)).replace('.', '_')
-            fname = f"{prefix}frame_{frame_num}_sec_{time_sec}_conf_{conf}_area_{area}.jpg"
-            cv2.imwrite(f"{faces_savedir}/{fname}", face)
+            if save_face:
+                conf = str(round(conf, 3)).replace('.', '_')
+                fname = f"{prefix}frame_{frame_num}_sec_{time_sec}_conf_{conf}_area_{area}.jpg"
+                cv2.imwrite(f"{faces_savedir}/{fname}", face)
         total += i
 
     np_savedir = os.path.join(
@@ -278,9 +280,10 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
     return total
 
 
-def filter_faces_from_data(raw_img_dir, target_dir, net):
+def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
     dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
 
+    total_media_ext, total_faces_ext = 0, 0
     # for each class in raw data
     for i in tqdm(range(len(dir_list))):
         dir = dir_list[i]                # get path to class dir
@@ -289,52 +292,63 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
         class_name = dir.split("/")[-1]  # get class name
         file_path_list = [file for file in glob.glob(dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
-        total_faces = 0
+
+        class_media_ext, class_faces_ext = 0, 0
         # foreach image or video in file_path_list
         for media_path in file_path_list:
-            # create dir for saving faces per class
-            faces_save_dir = os.path.join(target_dir, class_name)
+            try:
+                # create dir for saving faces per class
+                faces_save_dir = os.path.join(target_dir, class_name)
 
-            frames_faces_obj_list = []
-            media_root = os.path.basename(media_path).split('.')[0]
-            mtype = get_file_type(media_path)
-            if mtype == "image":
-                faces, feats, confs, areas = extract_face_feat_conf_area_list(
-                    net, media_path)
-                frames_faces_obj_list.append(FrameFacesObj(
-                    1, 1, faces, feats, confs, areas))
-            elif mtype == "video":
-                # save faces from videos inside sub dirs if flag is set
-                if SAVE_VIDEO_FACES_IN_SUBDIRS:
-                    faces_save_dir = os.path.join(faces_save_dir, media_root)
-                    if os.path.exists(faces_save_dir):  # skip pre-extracted faces
-                        print(
-                            f"Skipping {faces_save_dir} as it already exists.")
-                        continue
+                frames_faces_obj_list = []
+                media_root = os.path.basename(media_path).split('.')[0]
+                mtype = get_file_type(media_path)
+                if mtype == "image":
+                    faces, feats, confs, areas = extract_face_feat_conf_area_list(
+                        net, media_path)
+                    frames_faces_obj_list.append(FrameFacesObj(
+                        1, 1, faces, feats, confs, areas))
+                elif mtype == "video":
+                    # save faces from videos inside sub dirs if flag is set
+                    if SAVE_VIDEO_FACES_IN_SUBDIRS:
+                        faces_save_dir = os.path.join(
+                            faces_save_dir, media_root)
+                        if os.path.exists(faces_save_dir):  # skip pre-extracted faces
+                            print(
+                                f"Skipping {faces_save_dir} as it already exists.")
+                            continue
 
-                cap = cv2.VideoCapture(media_path)
-                step = int(round(cap.get(cv2.CAP_PROP_FPS)))
-                frame_num = 0
-                save_frames_num = 0
-                ret, frame = cap.read()
-                while ret:
-                    frame_num += 1
-                    if frame_num % step == 0 or frame_num == 1:
-                        save_frames_num += 1
-                        if save_frames_num > MAX_N_FRAME_FROM_VID:
-                            break
-                        faces, feats, confs, areas = extract_face_feat_conf_area_list(
-                            net, frame)
-                        frames_faces_obj_list.append(FrameFacesObj(
-                            frame_num, frame_num // step, faces, feats, confs, areas))
+                    cap = cv2.VideoCapture(media_path)
+                    step = int(round(cap.get(cv2.CAP_PROP_FPS)))
+                    frame_num = 0
+                    save_frames_num = 0
                     ret, frame = cap.read()
-                cap.release()
-                cv2.destroyAllWindows()
+                    while ret:
+                        frame_num += 1
+                        if frame_num % step == 0 or frame_num == 1:
+                            save_frames_num += 1
+                            if save_frames_num > MAX_N_FRAME_FROM_VID:
+                                break
+                            faces, feats, confs, areas = extract_face_feat_conf_area_list(
+                                net, frame)
+                            frames_faces_obj_list.append(FrameFacesObj(
+                                frame_num, frame_num // step, faces, feats, confs, areas))
+                        ret, frame = cap.read()
+                    cap.release()
+                    cv2.destroyAllWindows()
 
-            faces_extracted = save_extracted_faces(
-                frames_faces_obj_list, media_root, save_dir=faces_save_dir)
-            total_faces += faces_extracted
-        logging.info(f"{total_faces} faces extracted for class {class_name}")
+                faces_extracted = save_extracted_faces(
+                    frames_faces_obj_list, media_root, faces_save_dir, save_face, save_feat)
+                class_faces_ext += faces_extracted
+                class_media_ext += 1
+            except Exception as e:
+                print(f"{e}. Extraction failed for media {media_path}")
+        total_faces_ext += class_faces_ext
+        total_media_ext += class_media_ext
+        logging.info(
+            f"{class_faces_ext} faces found for class {class_name} in {class_media_ext} files")
+    logging.info(
+        f"{total_faces_ext} faces extracted from {total_media_ext} files")
 
 
 def main():
@@ -358,7 +372,14 @@ def main():
     parser.add_argument("-os", "--output_size",
                         nargs=2,
                         help='Output face images are resized to this (width, height) -os 112 112. (default: %(default)s).')
+    parser.add_argument('-noface', '--dont_save_face',
+                        action="store_false",
+                        help="""Flag avoids saving faces if set (default: %(default)s).""")
+    parser.add_argument('-nofeat', '--dont_save_feat',
+                        action="store_false",
+                        help="""Flag avoids saving face feats if set (default: %(default)s).""")
     args = parser.parse_args()
+    logging.info(f"Arguments used: {args}")
     print("Current Arguments: ", args)
     net = load_net(model=args.model,
                    prototxt=args.prototxt,
@@ -371,7 +392,9 @@ def main():
 
     filter_faces_from_data(args.raw_datadir_path,
                            args.target_datadir_path,
-                           net)
+                           net,
+                           save_face=args.dont_save_face,
+                           save_feat=args.dont_save_feat)
 
 
 if __name__ == "__main__":

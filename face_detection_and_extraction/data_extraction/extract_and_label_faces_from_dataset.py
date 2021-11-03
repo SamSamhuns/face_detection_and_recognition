@@ -373,6 +373,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
 def filter_faces_from_data(raw_img_dir, target_dir, net):
     class_dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
 
+    total_media_ext, total_faces_ext = 0, 0
     # for each class in raw data
     for i in tqdm(range(len(class_dir_list))):
         class_dir = class_dir_list[i]          # get path to class dir
@@ -381,55 +382,65 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
         class_name = class_dir.split("/")[-1]
         file_path_list = [file for file in glob.glob(class_dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
-        total_faces = 0
+
+        class_media_ext, class_faces_ext = 0, 0
         # foreach image or video in file_path_list
         for media_path in file_path_list:
-            # create dir for saving faces per class
-            faces_save_dir = os.path.join(target_dir, class_name)
+            try:
+                # create dir for saving faces per class
+                faces_save_dir = os.path.join(target_dir, class_name)
 
-            frames_faces_obj_list = []
-            media_root = os.path.basename(media_path).split('.')[0]
-            mtype = get_file_type(media_path)
-            if mtype == "image":
-                # Note: for images, face feature extraction and tracking is not implemented
-                faces, faceids, bboxes, confs, ages, genders = extract_face_img_id_bbox_conf_age_gender_list(
-                    net, media_path)
-                frames_faces_obj_list.append(FrameFacesObj(
-                    faces, faceids, 1, 1, bboxes, confs, ages, genders))
-            elif mtype == "video":
-                # save faces from videos inside sub dirs if flag is set
-                if SAVE_VIDEO_FACES_IN_SUBDIRS:
-                    faces_save_dir = os.path.join(faces_save_dir, media_root)
-                    if os.path.exists(faces_save_dir):  # skip pre-extracted faces
-                        print(
-                            f"Skipping {faces_save_dir} as it already exists.")
-                        continue
+                frames_faces_obj_list = []
+                media_root = os.path.basename(media_path).split('.')[0]
+                mtype = get_file_type(media_path)
+                if mtype == "image":
+                    # Note: for images, face feature extraction and tracking is not implemented
+                    faces, faceids, bboxes, confs, ages, genders = extract_face_img_id_bbox_conf_age_gender_list(
+                        net, media_path)
+                    frames_faces_obj_list.append(FrameFacesObj(
+                        faces, faceids, 1, 1, bboxes, confs, ages, genders))
+                elif mtype == "video":
+                    # save faces from videos inside sub dirs if flag is set
+                    if SAVE_VIDEO_FACES_IN_SUBDIRS:
+                        faces_save_dir = os.path.join(faces_save_dir, media_root)
+                        if os.path.exists(faces_save_dir):  # skip pre-extracted faces
+                            print(
+                                f"Skipping {faces_save_dir} as it already exists.")
+                            continue
 
-                cap = cv2.VideoCapture(media_path)
-                # take 1 frame per sec
-                step = int(round(cap.get(cv2.CAP_PROP_FPS)))
-                frame_num = 0
-                save_frames_num = 0
-                ret, frame = cap.read()
-                while ret:
-                    frame_num += 1
-                    if frame_num % step == 0 or frame_num == 1:
-                        save_frames_num += 1
-                        if save_frames_num > MAX_N_FRAME_FROM_VID:
-                            break
-                        faces, faceids, bboxes, confs, ages, genders = extract_face_img_id_bbox_conf_age_gender_list(
-                            net, frame)
-                        frames_faces_obj_list.append(FrameFacesObj(
-                            faces, faceids, frame_num, frame_num // step, bboxes, confs, ages, genders))
+                    cap = cv2.VideoCapture(media_path)
+                    # take 1 frame per sec
+                    step = int(round(cap.get(cv2.CAP_PROP_FPS)))
+                    frame_num = 0
+                    save_frames_num = 0
                     ret, frame = cap.read()
-                cap.release()
-                cv2.destroyAllWindows()
-                net.clear_faces()
+                    while ret:
+                        frame_num += 1
+                        if frame_num % step == 0 or frame_num == 1:
+                            save_frames_num += 1
+                            if save_frames_num > MAX_N_FRAME_FROM_VID:
+                                break
+                            faces, faceids, bboxes, confs, ages, genders = extract_face_img_id_bbox_conf_age_gender_list(
+                                net, frame)
+                            frames_faces_obj_list.append(FrameFacesObj(
+                                faces, faceids, frame_num, frame_num // step, bboxes, confs, ages, genders))
+                        ret, frame = cap.read()
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    net.clear_faces()
 
-            faces_extracted = save_extracted_faces(
-                frames_faces_obj_list, media_root, faces_save_dir)
-            total_faces += faces_extracted
-        logging.info(f"{total_faces} faces extracted for class {class_name}")
+                faces_extracted = save_extracted_faces(
+                    frames_faces_obj_list, media_root, faces_save_dir)
+                class_faces_ext += faces_extracted
+                class_media_ext += 1
+            except Exception as e:
+                print(f"{e}. Extraction failed for media {media_path}")
+        total_faces_ext += class_faces_ext
+        total_media_ext += class_media_ext
+        logging.info(
+            f"{class_faces_ext} faces found for class {class_name} in {class_media_ext} files")
+    logging.info(
+        f"{total_faces_ext} faces extracted from {total_media_ext} files")
 
 
 def main():
@@ -459,6 +470,7 @@ def main():
                         help="""Output face images are resized to this (width, height)
                         -os 112 112. If None, faces are not resized. (default: %(default)s).""")
     args = parser.parse_args()
+    logging.info(f"Arguments used: {args}")
     print("Current Arguments: ", args)
 
     net = load_net(model=args.model,

@@ -100,7 +100,7 @@ class Net(object):
             self.feature_net = OVNetwork(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
-                det_thres=None, bbox_area_thres=None)
+                det_thres=None, bbox_area_thres=None, verbose=False)
         else:
             raise NotImplementedError(
                 f"{feat_net_type} feature extraction net is not implemented" +
@@ -356,7 +356,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
         for face, id, bbox, conf, age, gender in zip(faces, ids, bboxes, confs, ages, genders):
             i += 1
             conf = str(round(conf, 3)).replace('.', '_')
-            fname = f"{prefix}_frame_{frame_num}_sec_{time_sec}_id_{id}_conf_{conf}_{gender}_{age}.jpg"
+            fname = f"{prefix}frame_{frame_num}_sec_{time_sec}_id_{id}_conf_{conf}_{gender}_{age}.jpg"
             cv2.imwrite(f"{faces_savedir}/{fname}", face)
         total += i
 

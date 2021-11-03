@@ -36,7 +36,7 @@ CLASS_NAME_TO_LABEL_DICT = read_pickle("data/sample/class_name_to_label.pkl")
 # max number of faces to consider from each frame for feat ext
 MAX_N_FACES_PER_FRAME = 5
 # max number of frames from which faces are extracted
-MAX_N_FRAME_FROM_VID = 200
+MAX_N_FRAME_FROM_VID = 20
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
                    'mp4', 'avi'}
 
@@ -44,12 +44,12 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
 # #################### Raw Data Organization #########################
 #        dataset
 #              |_ class_1
-#                        |_ img1/vid1
-#                        |_ img2/vid2
+#                        |_ {img1/vid1}
+#                        |_ {img2/vid2}
 #                        |_ ....
 #              |_ class_2
-#                        |_ img1/vid1
-#                        |_ img2/vid2
+#                        |_ {img1/vid1}
+#                        |_ {img2/vid2}
 #                        |_ ....
 #              ...
 #
@@ -95,7 +95,7 @@ class Net(object):
             self.feature_net = OVNetwork(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
-                det_thres=None, bbox_area_thres=None)
+                det_thres=None, bbox_area_thres=None, verbose=False)
         else:
             raise NotImplementedError(
                 f"{feat_net_type} feature extraction net is not implemented" +
@@ -191,7 +191,7 @@ def extract_face_feat_conf_area_list(net, img):
     detections = net.inf_func(
         net.face_net, image, net.FACE_MODEL_INPUT_SIZE, mean_values=net.FACE_MODEL_MEAN_VALUES)
     if detections is None:  # no faces detected
-        return [], []
+        return [], [], [], []
     # obtain bounding boxesx and conf scores
     boxes, confs, areas = net.bbox_conf_func(
         detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
@@ -217,7 +217,7 @@ def extract_face_feat_conf_area_list(net, img):
     return face_list, feat_list, confs, areas
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=True, faces_per_frame=4, feat_sz=512) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=True, faces_per_frame=4, feat_sz=256) -> None:
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
@@ -241,8 +241,8 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
         if save_feat:
             feats = img.feats[:faces_per_frame]
             if len(feats) < faces_per_frame:  # zero-pad if num of faces less than faces_per_frame
-                feats.extend([np.zeros(feat_sz)
-                              for _ in range(faces_per_frame - len(feats))])
+                face_diff = faces_per_frame - len(feats)
+                feats.extend([np.zeros(feat_sz) for _ in range(face_diff)])
             feats_list.extend(feats)
 
         single_frame_info = {"frame_num": frame_num,
@@ -253,18 +253,21 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_feat=
         for face, conf, area in zip(faces, confs, areas):
             i += 1
             conf = str(round(conf, 3)).replace('.', '_')
-            fname = f"{prefix}_frame_{frame_num}_sec_{time_sec}_conf_{conf}_area_{area}.jpg"
+            fname = f"{prefix}frame_{frame_num}_sec_{time_sec}_conf_{conf}_area_{area}.jpg"
             cv2.imwrite(f"{faces_savedir}/{fname}", face)
         total += i
 
-    np_savedir = os.path.join(target_dir, "npy", class_name)
+    np_savedir = os.path.join(target_dir, f"npy_feat_{feat_sz}", class_name)
     os.makedirs(np_savedir, exist_ok=True)
     np_savepath = os.path.join(np_savedir, media_root + ".npy")
     annot_dict["class_name"] = class_name
     annot_dict["label"] = CLASS_NAME_TO_LABEL_DICT[class_name]
     if save_feat:
+        if len(frames_faces_obj_list) < MAX_N_FRAME_FROM_VID:
+            frame_diff = MAX_N_FRAME_FROM_VID - len(frames_faces_obj_list)
+            feats_list.extend([np.zeros(feat_sz)
+                               for _ in range(faces_per_frame)] * frame_diff)
         annot_dict["feature"] = np.concatenate(feats_list, axis=0)
-        print("ANNOT_DICT['FEATURE'] SHAPE", annot_dict["feature"].shape)
     np.save(np_savepath, annot_dict)
 
     return total

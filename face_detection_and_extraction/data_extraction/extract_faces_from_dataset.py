@@ -31,7 +31,7 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
 
 # ######################## Settings ##################################
 
-CLASS_NAME_TO_LABEL_DICT = read_pickle("data/sample/class_name_to_label.pkl")
+CLASS_NAME_TO_LABEL_DICT = read_pickle("data/custom_video/class_name_to_label.pkl")
 # size of features from one face
 FACE_FEATURE_SIZE = 256
 # max number of faces to consider from each frame for feat ext
@@ -218,14 +218,13 @@ def extract_face_feat_conf_area_list(net, img):
     return face_list, feat_list, confs, areas
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_save_dir, save_feat, feats_save_dir) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_face, faces_save_dir, save_feat, feats_save_dir):
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
         media_root: root name of media file
         save_dir: dir where face imgs are saved in class dirs
     """
-    class_name = faces_save_dir.split('/')[2]
     if save_face:
         os.makedirs(faces_save_dir, exist_ok=True)
     annot_dict = {"media_id": media_root, "frames_info": []}
@@ -267,14 +266,14 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_sav
             frame_diff = MAX_N_FRAME_FROM_VID - len(frames_faces_obj_list)
             feats_list.extend([np.zeros(FACE_FEATURE_SIZE)
                                for _ in range(MAX_N_FACES_PER_FRAME)] * frame_diff)
-        annot_dict["feature"] = np.concatenate(feats_list, axis=0)
+        annot_dict["feature"] = np.concatenate(feats_list, axis=0).astype(np.float32)
     np.save(npy_savepath, annot_dict)
 
     return total
 
 
-def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
-    dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
+def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
+    dir_list = glob.glob(fix_path_for_globbing(source_dir))
 
     total_media_ext, total_faces_ext = 0, 0
     # for each class in raw data
@@ -335,7 +334,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
                     cv2.destroyAllWindows()
 
                 faces_extracted = save_extracted_faces(
-                    frames_faces_obj_list, media_root, save_face, faces_save_dir, save_feat, feats_save_dir)
+                    frames_faces_obj_list, media_root, class_name, save_face, faces_save_dir, save_feat, feats_save_dir)
                 class_faces_ext += faces_extracted
                 class_media_ext += 1
             except Exception as e:
@@ -351,10 +350,10 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
 def main():
     parser = get_argparse(description="Dataset face extraction")
     parser.remove_argument("input_src")
-    parser.add_argument('-rd', '--raw_datadir_path',
+    parser.add_argument('-sd', '--source_datadir_path',
                         type=str, required=True,
-                        help="""Raw dataset dir path with
-                        class imgs inside folders.""")
+                        help="""Source dataset dir path with
+                        class imgs/vids inside folders.""")
     parser.add_argument('-td', '--target_datadir_path',
                         type=str, default="face_data",
                         help="""Target dataset dir path where
@@ -387,7 +386,7 @@ def main():
                    model_out_size=args.output_size,
                    device=args.device)
 
-    filter_faces_from_data(args.raw_datadir_path,
+    filter_faces_from_data(args.source_datadir_path,
                            args.target_datadir_path,
                            net,
                            save_face=args.dont_save_face,

@@ -5,7 +5,6 @@ import os
 import sys
 import cv2
 import glob
-import pickle
 import logging
 import onnxruntime
 import numpy as np
@@ -324,7 +323,7 @@ def extract_face_img_id_bbox_conf_age_gender_list(net, img):
     return faces, faceids, bboxes, confs, ages, genders
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_save_dir, save_feat, feats_save_dir) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_face, faces_save_dir, save_feat, feats_save_dir):
     """
     Save extracted faces for one image or one video
     args:
@@ -332,7 +331,6 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_sav
         media_root: root name of media file
         faces_save_dir: dir where face imgs are saved in class dirs
     """
-    class_name = faces_save_dir.split('/')[2]
     if save_face:
         os.makedirs(faces_save_dir, exist_ok=True)
 
@@ -367,8 +365,8 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_sav
     return total
 
 
-def filter_faces_from_data(raw_img_dir, target_dir, net):
-    class_dir_list = glob.glob(fix_path_for_globbing(raw_img_dir))
+def filter_faces_from_data(source_dir, target_dir, net):
+    class_dir_list = glob.glob(fix_path_for_globbing(source_dir))
 
     total_media_ext, total_faces_ext = 0, 0
     # for each class in raw data
@@ -428,7 +426,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
                     net.clear_faces()
 
                 faces_extracted = save_extracted_faces(
-                    frames_faces_obj_list, media_root, True, faces_save_dir, True, feats_save_dir)
+                    frames_faces_obj_list, media_root, class_name, True, faces_save_dir, True, feats_save_dir)
                 class_faces_ext += faces_extracted
                 class_media_ext += 1
             except Exception as e:
@@ -448,10 +446,10 @@ def main():
     parser.add_argument("-m", "--model",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')
-    parser.add_argument('-rd', '--raw_datadir_path',
+    parser.add_argument('-sd', '--source_datadir_path',
                         type=str, required=True,
-                        help="""Raw dataset dir path with
-                        class imgs inside folders.""")
+                        help="""Source dataset dir path with
+                        class imgs/vids inside folders.""")
     parser.add_argument('-td', '--target_datadir_path',
                         type=str, default="face_data",
                         help="""Target dataset dir path where
@@ -479,7 +477,7 @@ def main():
                    model_out_size=args.output_size,
                    device=args.device)
 
-    filter_faces_from_data(args.raw_datadir_path,
+    filter_faces_from_data(args.source_datadir_path,
                            args.target_datadir_path,
                            net)
 

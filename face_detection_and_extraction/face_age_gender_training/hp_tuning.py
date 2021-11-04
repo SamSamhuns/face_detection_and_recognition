@@ -58,10 +58,12 @@ def train(config: dict):
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         optimizer, gamma=config['gamma'])
 
-    if config['gender_or_age'].lower() == 'age':
+    if config['gender_or_age_or_custom_video'].lower() == 'age':
         from data_loader.data_loaders import AgeDataLoader as DataLoader
-    elif config['gender_or_age'].lower() == 'gender':
+    elif config['gender_or_age_or_custom_video'].lower() == 'gender':
         from data_loader.data_loaders import GenderDataLoader as DataLoader
+    elif config['gender_or_age_or_custom_video'].lower() == 'custom_video':
+        from data_loader.data_loaders import VideoFeatDataLoader as DataLoader
     else:
         raise ValueError
 

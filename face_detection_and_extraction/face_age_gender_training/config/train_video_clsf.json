@@ -10,8 +10,8 @@
             "num_residuals_per_block": 1,
             "num_blocks": 4,
             "num_classes": 14,
-            "num_initial_features": 40960,
-            "reduce_in_features": 1024,
+            "num_initial_features": 25600,
+            "reduce_in_features": 512,
             "add_residual": true,
             "add_IC": true
         }
@@ -20,7 +20,7 @@
         "type": "VideoFeatDataLoader",
         "args": {
             "data_dir": "../data/",
-            "batch_size": 128,
+            "batch_size": 32,
             "shuffle": true,
             "validation_split": 0,
             "num_workers": 8,

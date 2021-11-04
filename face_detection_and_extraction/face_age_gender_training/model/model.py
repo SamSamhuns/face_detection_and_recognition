@@ -105,7 +105,7 @@ class ResMLP(BaseModel):
         # if reduce_feat_num is not None, reduce input features with downsampling instead of residual block
         if reduce_in_features is not None:
             blocks.append(DownSample(
-                num_initial_features, reduce_in_features // 2, dropout, add_IC))
+                num_initial_features, reduce_in_features, dropout, add_IC))
         else:
             reduce_in_features = num_initial_features
 

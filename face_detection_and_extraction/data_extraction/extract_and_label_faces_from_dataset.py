@@ -34,7 +34,6 @@ CV2_DISP_WAIT_MS = 100
 # X & Y displacements for cv2 window
 CV2_DISP_LOC_X = 600
 CV2_DISP_LOC_Y = 50
-SAVE_VIDEO_FACES_IN_SUBDIRS = True
 MAX_N_FRAME_FROM_VID = 200  # max number of frames from which faces are extracted
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
                    'mp4', 'avi'}
@@ -325,25 +324,23 @@ def extract_face_img_id_bbox_conf_age_gender_list(net, img):
     return faces, faceids, bboxes, confs, ages, genders
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_save_dir, save_feat, feats_save_dir) -> None:
     """
     Save extracted faces for one image or one video
     args:
         frames_faces_obj_list: list of FrameFacesObj for each frame
         media_root: root name of media file
-        save_dir: dir where face imgs are saved in class dirs
+        faces_save_dir: dir where face imgs are saved in class dirs
     """
-    target_dir = save_dir.split('/')[0]
-    class_name = save_dir.split('/')[1]
-    faces_savedir = os.path.join(target_dir, "faces", class_name)
-    os.makedirs(faces_savedir, exist_ok=True)
+    class_name = faces_save_dir.split('/')[2]
+    if save_face:
+        os.makedirs(faces_save_dir, exist_ok=True)
 
     annot_dict = {"media_id": media_root, "frames_info": []}
     total = 0
     for img in frames_faces_obj_list:  # for each frame
         frame_num = img.frame_num
         time_sec = img.time_sec
-        prefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
         faces, ids, bboxes, confs, ages, genders = (
             img.faces, img.ids, img.bboxes, img.confs, img.ages, img.genders)
 
@@ -355,18 +352,18 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir) -> None:
         # for each detected face
         for face, id, bbox, conf, age, gender in zip(faces, ids, bboxes, confs, ages, genders):
             i += 1
-            conf = str(round(conf, 3)).replace('.', '_')
-            fname = f"{prefix}frame_{frame_num}_sec_{time_sec}_id_{id}_conf_{conf}_{gender}_{age}.jpg"
-            cv2.imwrite(f"{faces_savedir}/{fname}", face)
+            if save_face:
+                conf = str(round(conf, 3)).replace('.', '_')
+                fname = f"frame_{frame_num}_sec_{time_sec}_id_{id}_conf_{conf}_{gender}_{age}.jpg"
+                cv2.imwrite(f"{faces_save_dir}/{fname}", face)
         total += i
 
-    pkl_savedir = os.path.join(target_dir, "pkl", class_name)
-    os.makedirs(pkl_savedir, exist_ok=True)
-    pkl_fpath = os.path.join(pkl_savedir, media_root + ".pkl")
-    with open(pkl_fpath, 'wb') as fptr:
-        annot_dict["class_name"] = class_name
-        annot_dict["media_url"] = ROOT_URL + media_root
-        pickle.dump(annot_dict, fptr)
+    os.makedirs(feats_save_dir, exist_ok=True)
+    npy_savepath = os.path.join(feats_save_dir, media_root + ".npy")
+    annot_dict["class_name"] = class_name
+    annot_dict["media_url"] = ROOT_URL + media_root
+    np.save(npy_savepath, annot_dict)
+
     return total
 
 
@@ -387,8 +384,11 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
         # foreach image or video in file_path_list
         for media_path in file_path_list:
             try:
-                # create dir for saving faces per class
-                faces_save_dir = os.path.join(target_dir, class_name)
+                # create dir for saving faces/feats per class
+                faces_save_dir = os.path.join(
+                    target_dir, "faces", class_name)
+                feats_save_dir = os.path.join(
+                    target_dir, "npy_feat", class_name)
 
                 frames_faces_obj_list = []
                 media_root = os.path.basename(media_path).split('.')[0]
@@ -400,13 +400,11 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
                     frames_faces_obj_list.append(FrameFacesObj(
                         faces, faceids, 1, 1, bboxes, confs, ages, genders))
                 elif mtype == "video":
-                    # save faces from videos inside sub dirs if flag is set
-                    if SAVE_VIDEO_FACES_IN_SUBDIRS:
-                        faces_save_dir = os.path.join(faces_save_dir, media_root)
-                        if os.path.exists(faces_save_dir):  # skip pre-extracted faces
-                            print(
-                                f"Skipping {faces_save_dir} as it already exists.")
-                            continue
+                    faces_save_dir = os.path.join(faces_save_dir, media_root)
+                    if os.path.exists(faces_save_dir):  # skip pre-extracted faces
+                        print(
+                            f"Skipping {faces_save_dir} as it already exists.")
+                        continue
 
                     cap = cv2.VideoCapture(media_path)
                     # take 1 frame per sec
@@ -430,7 +428,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net):
                     net.clear_faces()
 
                 faces_extracted = save_extracted_faces(
-                    frames_faces_obj_list, media_root, faces_save_dir)
+                    frames_faces_obj_list, media_root, True, faces_save_dir, True, feats_save_dir)
                 class_faces_ext += faces_extracted
                 class_media_ext += 1
             except Exception as e:

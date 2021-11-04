@@ -31,7 +31,6 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
 
 # ######################## Settings ##################################
 
-SAVE_VIDEO_FACES_IN_SUBDIRS = True
 CLASS_NAME_TO_LABEL_DICT = read_pickle("data/sample/class_name_to_label.pkl")
 # size of features from one face
 FACE_FEATURE_SIZE = 256
@@ -100,8 +99,8 @@ class Net(object):
                 det_thres=None, bbox_area_thres=None, verbose=False)
         else:
             raise NotImplementedError(
-                f"{feat_net_type} feature extraction net is not implemented" +
-                "Supported types are ['MOBILE_FACENET', 'FACE_REID_MNV3']")
+                f"""{feat_net_type} feature extraction net is not implemented
+                Supported types are ['MOBILE_FACENET', 'FACE_REID_MNV3']""")
 
     def get_face_features(self, face):
         if self.feat_net_type == "MOBILE_FACENET":
@@ -219,26 +218,22 @@ def extract_face_feat_conf_area_list(net, img):
     return face_list, feat_list, confs, areas
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_face, save_feat) -> None:
+def save_extracted_faces(frames_faces_obj_list, media_root, save_face, faces_save_dir, save_feat, feats_save_dir) -> None:
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
         media_root: root name of media file
         save_dir: dir where face imgs are saved in class dirs
     """
-    target_dir = save_dir.split('/')[0]
-    class_name = save_dir.split('/')[1]
+    class_name = faces_save_dir.split('/')[2]
     if save_face:
-        faces_savedir = os.path.join(target_dir, "faces", class_name)
-        os.makedirs(faces_savedir, exist_ok=True)
-
+        os.makedirs(faces_save_dir, exist_ok=True)
     annot_dict = {"media_id": media_root, "frames_info": []}
     total = 0
     feats_list = []  # feature for one media file img/video
     for img in frames_faces_obj_list:  # for each frame
         frame_num = img.frame_num
         time_sec = img.time_sec
-        prefix = '' if SAVE_VIDEO_FACES_IN_SUBDIRS else media_root + '_'
         faces, confs, areas = img.faces, img.confs, img.areas
 
         if save_feat:
@@ -259,14 +254,12 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_face,
             i += 1
             if save_face:
                 conf = str(round(conf, 3)).replace('.', '_')
-                fname = f"{prefix}frame_{frame_num}_sec_{time_sec}_conf_{conf}_area_{area}.jpg"
-                cv2.imwrite(f"{faces_savedir}/{fname}", face)
+                fname = f"frame_{frame_num}_sec_{time_sec}_conf_{conf}_area_{area}.jpg"
+                cv2.imwrite(f"{faces_save_dir}/{fname}", face)
         total += i
 
-    np_savedir = os.path.join(
-        target_dir, f"npy_feat_{FACE_FEATURE_SIZE}", class_name)
-    os.makedirs(np_savedir, exist_ok=True)
-    np_savepath = os.path.join(np_savedir, media_root + ".npy")
+    os.makedirs(feats_save_dir, exist_ok=True)
+    npy_savepath = os.path.join(feats_save_dir, media_root + ".npy")
     annot_dict["class_name"] = class_name
     annot_dict["label"] = CLASS_NAME_TO_LABEL_DICT[class_name]
     if save_feat:
@@ -275,7 +268,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, save_dir, save_face,
             feats_list.extend([np.zeros(FACE_FEATURE_SIZE)
                                for _ in range(MAX_N_FACES_PER_FRAME)] * frame_diff)
         annot_dict["feature"] = np.concatenate(feats_list, axis=0)
-    np.save(np_savepath, annot_dict)
+    np.save(npy_savepath, annot_dict)
 
     return total
 
@@ -297,8 +290,11 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
         # foreach image or video in file_path_list
         for media_path in file_path_list:
             try:
-                # create dir for saving faces per class
-                faces_save_dir = os.path.join(target_dir, class_name)
+                # create dir for saving faces/feats per class
+                faces_save_dir = os.path.join(
+                    target_dir, "faces", class_name)
+                feats_save_dir = os.path.join(
+                    target_dir, f"npy_feat_{FACE_FEATURE_SIZE}", class_name)
 
                 frames_faces_obj_list = []
                 media_root = os.path.basename(media_path).split('.')[0]
@@ -309,14 +305,15 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
                     frames_faces_obj_list.append(FrameFacesObj(
                         1, 1, faces, feats, confs, areas))
                 elif mtype == "video":
-                    # save faces from videos inside sub dirs if flag is set
-                    if SAVE_VIDEO_FACES_IN_SUBDIRS:
-                        faces_save_dir = os.path.join(
-                            faces_save_dir, media_root)
-                        if os.path.exists(faces_save_dir):  # skip pre-extracted faces
-                            print(
-                                f"Skipping {faces_save_dir} as it already exists.")
-                            continue
+                    faces_save_dir = os.path.join(faces_save_dir, media_root)
+                    if os.path.exists(faces_save_dir):  # skip pre-extracted faces
+                        print(
+                            f"Skipping {faces_save_dir} as it already exists.")
+                        continue
+                    if os.path.exists(feats_save_dir):  # skip pre-extracted feats
+                        print(
+                            f"Skipping {feats_save_dir} as it already exists.")
+                        continue
 
                     cap = cv2.VideoCapture(media_path)
                     step = int(round(cap.get(cv2.CAP_PROP_FPS)))
@@ -338,7 +335,7 @@ def filter_faces_from_data(raw_img_dir, target_dir, net, save_face, save_feat):
                     cv2.destroyAllWindows()
 
                 faces_extracted = save_extracted_faces(
-                    frames_faces_obj_list, media_root, faces_save_dir, save_face, save_feat)
+                    frames_faces_obj_list, media_root, save_face, faces_save_dir, save_feat, feats_save_dir)
                 class_faces_ext += faces_extracted
                 class_media_ext += 1
             except Exception as e:

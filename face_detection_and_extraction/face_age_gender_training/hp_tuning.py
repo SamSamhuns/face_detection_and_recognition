@@ -34,7 +34,8 @@ def train(config: dict):
                  num_residuals_per_block=config['num_residuals_per_block'],
                  num_blocks=config['num_blocks'],
                  num_classes=config['num_classes'],
-                 num_initial_features=512,
+                 num_initial_features=config['num_initial_features'],
+                 reduce_in_features=config["reduce_in_features"],
                  add_residual=config['add_residual'],
                  add_IC=config['add_IC'])
 

@@ -19,5 +19,7 @@
   "limit_data": null,
   "amp": true,
   "num_classes": 2,
+  "num_initial_features": 512,
+  "reduce_in_features": null,
   "validation_split": 0.1
 }

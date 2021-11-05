@@ -200,7 +200,7 @@ class VideoFeatDataset(torch.utils.data.Dataset):
     """
 
     def __init__(self, data_dir: str = 'data', dataset: str = None,
-                 training: bool = True, limit_data: int = None):
+                 training: bool = True, limit_data: int = None, **kwargs):
 
         if dataset == 'custom_video':
             data_paths = recursively_get_file_paths(os.path.join(data_dir, dataset))
@@ -274,8 +274,8 @@ class VideoFeatDataLoader(BaseDataLoader):
     """
 
     def __init__(self, data_dir: str, batch_size: int, shuffle: bool, validation_split: float,
-                 num_workers: int, dataset: str, num_classes: int, training: bool, limit_data: int = None):
+                 num_workers: int, dataset: str, num_classes: int, training: bool, limit_data: int = None, **kwargs):
 
         self.dataset = VideoFeatDataset(
-            data_dir=data_dir, dataset=dataset, limit_data=limit_data)
+            data_dir=data_dir, dataset=dataset, limit_data=limit_data, **kwargs)
         super().__init__(self.dataset, batch_size, shuffle, validation_split, num_workers)

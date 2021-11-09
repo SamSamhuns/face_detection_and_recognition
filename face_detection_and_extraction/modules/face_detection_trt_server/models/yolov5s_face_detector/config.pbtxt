@@ -1,0 +1,59 @@
+name: "yolov5s_face_detector"
+platform: "onnxruntime_onnx"
+max_batch_size: 1
+
+input [
+  {
+    name: "images"
+    data_type: TYPE_FP32
+    dims: [3, -1 , -1]
+  }
+]
+
+output [
+  {
+    name: "stride_8"
+    data_type: TYPE_FP32
+    dims: [-1, -1, -1, -1]
+  },
+  {
+    name: "stride_16"
+    data_type: TYPE_FP32
+    dims: [-1, -1, -1, -1]
+  },
+  {
+    name: "stride_32"
+    data_type: TYPE_FP32
+    dims: [-1, -1, -1, -1]
+  }
+]
+
+optimization { execution_accelerators {
+  gpu_execution_accelerator : [ {
+    name : "tensorrt"
+    parameters { key: "precision_mode" value: "FP16" }
+    parameters { key: "max_workspace_size_bytes" value: "1073741824" }
+    }]
+}}
+
+instance_group [
+    {
+      count: 1
+      kind: KIND_CPU
+    }
+  ]
+
+model_warmup {
+    name: "images"
+    batch_size: 1
+    inputs: {
+        key: "images"
+        value: {
+            dims: 3
+            dims: 640
+            dims: 640
+            data_type: TYPE_FP32
+            zero_data: false
+        }
+     }
+}

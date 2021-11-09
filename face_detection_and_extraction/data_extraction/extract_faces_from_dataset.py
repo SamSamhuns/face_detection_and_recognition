@@ -5,6 +5,7 @@ import os
 import cv2
 import sys
 import glob
+import time
 import logging
 import mimetypes
 import onnxruntime
@@ -18,6 +19,7 @@ from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
 from modules.opencv2_dnn.utils import get_bboxes_confs_areas as get_bboxes_confs_areas_cv2
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
+from modules.face_detection_trt_server.inference import TritonServerInferenceSession
 from modules.openvino.utils import OVNetwork
 
 
@@ -31,7 +33,8 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
 
 # ######################## Settings ##################################
 
-CLASS_NAME_TO_LABEL_DICT = read_pickle("data/custom_video/class_name_to_label.pkl")
+CLASS_NAME_TO_LABEL_DICT = read_pickle(
+    "data/custom_video/class_name_to_label.pkl")
 # size of features from one face
 FACE_FEATURE_SIZE = 256
 # max number of faces to consider from each frame for feat ext
@@ -60,17 +63,17 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
 
 
 class Net(object):
-    __slots__ = ["face_net", "feature_net", "inf_func", "bbox_conf_func",
+    __slots__ = ["face_net", "feature_net", "inf_func", "bbox_conf_area_func",
                  "feat_net_type", "det_thres", "bbox_area_thres",
                  "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE"]
 
     def __init__(self, face_net, feat_net_type,
-                 inf_func, bbox_conf_func,
+                 inf_func, bbox_conf_area_func,
                  det_thres, bbox_area_thres,
                  model_in_size=(640, 640), model_out_size=None):
         self.face_net = face_net
         self.inf_func = inf_func
-        self.bbox_conf_func = bbox_conf_func
+        self.bbox_conf_area_func = bbox_conf_area_func
         self.det_thres = det_thres
         self.bbox_area_thres = bbox_area_thres
         # in_size = (width, height), conv to int
@@ -155,13 +158,18 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
         face_net = cv2.dnn.readNetFromTensorflow(model, prototxt)
     elif fext == ".onnx":
         face_net = onnxruntime.InferenceSession(model)  # ignores prototxt
+    elif fname == "face_detection_trt_server":
+        face_net = TritonServerInferenceSession("ensemble_yolov5_face")
     else:
         raise NotImplementedError(
             f"[ERROR] model with extension {fext} not implemented")
 
     if fext == ".onnx":
         inf_func = inf_yolov5
-        bbox_conf_func = get_bboxes_confs_areas_yolov5
+        bbox_conf_area_func = get_bboxes_confs_areas_yolov5
+    elif fname == "face_detection_trt_server":
+        inf_func = face_net.inference_trt_model_yolov5_face
+        bbox_conf_area_func = get_bboxes_confs_areas_yolov5
     else:
         if device == "cpu":
             face_net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
@@ -171,9 +179,9 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
             face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
             print("Using GPU device")
         inf_func = inf_cv2
-        bbox_conf_func = get_bboxes_confs_areas_cv2
+        bbox_conf_area_func = get_bboxes_confs_areas_cv2
     return Net(face_net, feat_net_type,
-               inf_func, bbox_conf_func,
+               inf_func, bbox_conf_area_func,
                det_thres, bbox_area_thres,
                model_in_size, model_out_size)
 
@@ -193,8 +201,8 @@ def extract_face_feat_conf_area_list(net, img):
         net.face_net, image, net.FACE_MODEL_INPUT_SIZE, mean_values=net.FACE_MODEL_MEAN_VALUES)
     if detections is None:  # no faces detected
         return [], [], [], []
-    # obtain bounding boxesx and conf scores
-    boxes, confs, areas = net.bbox_conf_func(
+    # obtain bounding boxe coords, conf scores and areas
+    boxes, confs, areas = net.bbox_conf_area_func(
         detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
 
     tx, ty = -6, -1
@@ -266,13 +274,15 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_fac
             frame_diff = MAX_N_FRAME_FROM_VID - len(frames_faces_obj_list)
             feats_list.extend([np.zeros(FACE_FEATURE_SIZE)
                                for _ in range(MAX_N_FACES_PER_FRAME)] * frame_diff)
-        annot_dict["feature"] = np.concatenate(feats_list, axis=0).astype(np.float32)
+        annot_dict["feature"] = np.concatenate(
+            feats_list, axis=0).astype(np.float32)
     np.save(npy_savepath, annot_dict)
 
     return total
 
 
 def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
+    init_tm = time.time()
     dir_list = glob.glob(fix_path_for_globbing(source_dir))
 
     total_media_ext, total_faces_ext = 0, 0
@@ -345,6 +355,10 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
             f"{class_faces_ext} faces found for class {class_name} in {class_media_ext} files")
     logging.info(
         f"{total_faces_ext} faces extracted from {total_media_ext} files")
+    logging.info(
+        f"Total time taken: {time.time() - init_tm:.2f}s")
+    print(
+        f"Time for extracting {total_faces_ext} faces is {time.time() - init_tm:.2f}s")
 
 
 def main():

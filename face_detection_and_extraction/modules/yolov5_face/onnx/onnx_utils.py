@@ -309,11 +309,11 @@ def xywh2xyxy(x):
     return y
 
 
-def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in_size):
+def get_bboxes_confs_areas(dets, det_thres, bbox_area_thres, orig_size, in_size):
     """
     Returns a tuple of bounding boxes, bbox confidence scores, and bbox area percentages
     args:
-        detections: np.ndarray of fmt [xmin, ymin, xmax, ymax, conf]
+        dets: np.ndarray of fmt [xmin, ymin, xmax, ymax, conf]
         det_thres: float bbox detection threshold
         bbox_area_thres: float bounding box area min threshold
         orig_size: original image size (width, height)
@@ -321,18 +321,19 @@ def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in
     """
     w, h = orig_size
     iw, ih = in_size
+    if not isinstance(dets, np.ndarray):
+        dets = dets.numpy()
     # filter detections below threshold
-    detections = detections[detections[..., 4] > det_thres]
+    dets = dets[dets[..., 4] > det_thres]
     # only select bboxes with area greater than 0.15% of total area of frame
     total_area = iw * ih
-    bbox_area = ((detections[:, 2] - detections[:, 0])
-                 * (detections[:, 3] - detections[:, 1]))
-    bbox_area_perc = (100 * bbox_area / total_area).numpy()
-    detections = detections[bbox_area_perc > bbox_area_thres]
+    bbox_area = ((dets[:, 2] - dets[:, 0]) * (dets[:, 3] - dets[:, 1]))
+    bbox_area_perc = (100 * bbox_area / total_area)
+    dets = dets[bbox_area_perc > bbox_area_thres]
 
-    bbox_confs = detections[..., 4].numpy()
+    bbox_confs = dets[..., 4]
+    boxes = dets[..., :4]
     # rescale detections to orig image size taking the padding into account
-    boxes = detections[..., :4].numpy()
     boxes = scale_coords((ih, iw), boxes, (h, w)).round()
 
     return boxes, bbox_confs, bbox_area_perc

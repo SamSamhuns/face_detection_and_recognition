@@ -66,8 +66,8 @@ class TritonPythonModel:
             # if no faces are detected
             if detections is None:
                 face_np_list = np.zeros((1, 3, moh, mow))
-                face_bbox_np_list = np.asarray([0, 0, 0, 0], dtype=np.int32)
-                face_conf_np_list = np.asarray([0.], dtype=np.float32)
+                face_bbox_np_list = np.asarray([[0, 0, 0, 0]], dtype=np.int32)
+                face_conf_np_list = np.asarray([[0.]], dtype=np.float32)
             # if faces are detected
             else:
                 input_image = input_image[..., ::-1]  # RGB2BGR

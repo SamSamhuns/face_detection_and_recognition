@@ -1,7 +1,7 @@
 FROM nvcr.io/nvidia/tritonserver:21.08-py3
 
-# ENV CUDA_DEVICE_ORDER=PCI_BUS_ID
-# ENV CUDA_VISIBLE_DEVICES=0
+ENV CUDA_DEVICE_ORDER=PCI_BUS_ID
+ENV CUDA_VISIBLE_DEVICES=0
 
 # install opencv reqs
 RUN apt-get update \

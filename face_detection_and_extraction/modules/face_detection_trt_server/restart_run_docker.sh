@@ -25,6 +25,7 @@ docker rm face_det || true
 echo "Running docker with exposed triton-server GRPC port: $grpc"
 docker run --rm \
       --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 \
+      --gpus device="0" \
       --name face_det \
       -p $grpc:8081 \
       yolov5_face_detection:latest

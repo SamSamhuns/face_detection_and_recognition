@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import numpy as np
-from python_on_whales import docker, exceptions as pw_exceptions
+from python_on_whales import docker
 
 sys.path.append(".")
 from modules.face_detection_trt_server.triton_utils import FlagConfig, get_client_and_model_metadata_config
@@ -15,7 +15,13 @@ class TritonServerInferenceSession(object):
 
     __slots__ = ["FLAGS", "trt_inf_data", "container"]
 
-    def __init__(self, face_det_thres, face_bbox_area_thres, model_name="ensemble_yolov5_face", device="gpu"):
+    def __init__(self,
+                 face_det_thres,
+                 face_bbox_area_thres,
+                 model_name="ensemble_yolov5_face",
+                 container_name="face_det",
+                 model_ping_retries=30,
+                 device="gpu"):
         if device != "gpu":
             raise ValueError(
                 f"{device} device mode is not supported. Only `gpu` mode is supported")
@@ -36,24 +42,28 @@ class TritonServerInferenceSession(object):
         docker.build("modules/face_detection_trt_server/",
                      tags="yolov5_face_detection:latest")
         # kill triton-server docker container if it already exists
-        try:
-            docker.container.kill("face_det")
-            print("Stopping and Killing container face_det")
-        except pw_exceptions.NoSuchContainer:
-            print("Container face_det does is not running")
+        if docker.container.exists(container_name):
+            docker.container.remove(container_name, force=True)
+            print(f"Stopping and removing container {container_name}")
+        else:
+            print(f"Container {container_name} is not running")
         # start triton-server docker container
-        self.container = docker.run(image="yolov5_face_detection:latest", name="face_det",
+        self.container = docker.run(image="yolov5_face_detection:latest", name=container_name,
                                     shm_size='1g', ulimit=['memlock=-1', 'stack=67108864'],
-                                    gpus='device="0"', detach=True, publish=[(8081, 8081)])
-        for i in range(6):
-            print(
-                f"Starting triton-server docker container ... Wait for {6-i} sec")
-            time.sleep(1)
-            os.system('clear')
-
-        model_info = get_client_and_model_metadata_config(self.FLAGS)
+                                    gpus='3', detach=True, publish=[(8081, 8081)])
+        # wait for container to start
+        for _ in range(model_ping_retries):
+            model_info = get_client_and_model_metadata_config(self.FLAGS)
+            if model_info == -1:  # error getting model info
+                for i in range(10):
+                    print(f"Model not ready. Reattempting after {10-i} sec...")
+                    time.sleep(1)
+                    os.system('clear')
+            else:
+                break
         if model_info == -1:  # error getting model info
-            return -1
+            raise Exception("Model could not start in time")
+
         triton_client, model_metadata, model_config = model_info
 
         # input_name, output_name, format, dtype are all lists

@@ -159,7 +159,7 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
     elif fext == ".onnx":
         face_net = onnxruntime.InferenceSession(model)  # ignores prototxt
     elif fname == "modules/face_detection_trt_server":
-        face_net = TritonServerInferenceSession(det_thres, bbox_area_thres, "ensemble_yolov5_face", device)
+        face_net = TritonServerInferenceSession(det_thres, bbox_area_thres, device=device)
     else:
         raise NotImplementedError(
             f"[ERROR] model with extension {fext} not implemented")

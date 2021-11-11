@@ -11,7 +11,10 @@ Inside a virtual environment:
 ```bash
 # install requirements for all face detection models
 $ pip install -r requirements.txt
-# install model specific requirements for the face detection models
+# install model specific requirements
+$ pip install -r face_detection_and_extraction/requirements/age_gender_training.txt
+$ pip install -r face_detection_and_extraction/requirements/face_detection_trt_server.txt
+$ pip install -r face_detection_and_extraction/requirements/mobile_facenet.txt
 $ pip install -r face_detection_and_extraction/requirements/blazeface.txt
 $ pip install -r face_detection_and_extraction/requirements/mtcnn.txt
 $ pip install -r face_detection_and_extraction/requirements/opencv.txt

@@ -319,9 +319,10 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                         print(
                             f"Skipping {faces_save_dir} as it already exists.")
                         continue
-                    if os.path.exists(feats_save_dir):  # skip pre-extracted feats
+                    feats_save_path = os.path.join(feats_save_dir, media_root + ".npy")
+                    if os.path.exists(feats_save_path):  # skip pre-extracted feats
                         print(
-                            f"Skipping {feats_save_dir} as it already exists.")
+                            f"Skipping {feats_save_path} as it already exists.")
                         continue
 
                     cap = cv2.VideoCapture(media_path)

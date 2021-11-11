@@ -20,7 +20,7 @@ class TritonServerInferenceSession(object):
                  face_bbox_area_thres,
                  model_name="ensemble_yolov5_face",
                  container_name="face_det",
-                 model_ping_retries=30,
+                 model_ping_retries=100,
                  device="gpu"):
         if device != "gpu":
             raise ValueError(
@@ -55,8 +55,8 @@ class TritonServerInferenceSession(object):
         for _ in range(model_ping_retries):
             model_info = get_client_and_model_metadata_config(self.FLAGS)
             if model_info == -1:  # error getting model info
-                for i in range(10):
-                    print(f"Model not ready. Reattempting after {10-i} sec...")
+                for i in range(5):
+                    print(f"Model not ready. Reattempting after {5-i} sec...")
                     time.sleep(1)
                     os.system('clear')
             else:

@@ -202,7 +202,7 @@ class VideoFeatDataset(torch.utils.data.Dataset):
     def __init__(self, data_dir: str = 'data', dataset: str = None,
                  training: bool = True, limit_data: int = None, **kwargs):
 
-        if dataset == 'custom_video':
+        if "custom_video" in dataset:
             data_paths = recursively_get_file_paths(os.path.join(data_dir, dataset))
         else:
             raise NotImplementedError(f"{dataset} is not implemented.")

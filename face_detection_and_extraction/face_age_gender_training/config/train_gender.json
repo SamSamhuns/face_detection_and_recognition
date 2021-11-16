@@ -25,6 +25,7 @@
             "validation_split": 0,
             "num_workers": 8,
             "dataset": "wiki",
+            "dataset_test": null,
             "num_classes": 2
         }
     },

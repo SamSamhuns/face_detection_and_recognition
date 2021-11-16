@@ -15,8 +15,7 @@ def accuracy(output: torch.tensor, target: torch.tensor):
 
 def accuracy_mse(output: torch.tensor, target: torch.tensor):
     """
-    This function was made when I was tinkering with regression rather than
-    classification. Just ignore it.
+    Accuracy when using regression rather than classification. Just ignore it.
     """
     with torch.no_grad():
         assert len(output) == len(target)
@@ -60,9 +59,6 @@ def accuracy_relaxed(output: torch.tensor, target: torch.tensor):
 
 
 def top_k_acc(output: torch.tensor, target: torch.tensor, k: int = 3):
-    """
-    Not a useful metric for gender or age. Just ignore it.
-    """
     with torch.no_grad():
         pred = torch.topk(output, k, dim=1)[1]
         assert pred.shape[0] == len(target)

@@ -22,9 +22,10 @@
             "data_dir": "../data/",
             "batch_size": 32,
             "shuffle": true,
-            "validation_split": 0,
+            "validation_split": 0.1,
             "num_workers": 8,
-            "dataset": "custom_video",
+            "dataset": "custom_video_256_train",
+            "dataset_test": "custom_video_256_test",
             "num_classes": 14
         }
     },
@@ -37,7 +38,8 @@
     },
     "loss": "cse",
     "metrics": [
-        "accuracy"
+        "accuracy",
+        "top_k_acc"
     ],
     "lr_scheduler": {
         "type": "ExponentialLR",

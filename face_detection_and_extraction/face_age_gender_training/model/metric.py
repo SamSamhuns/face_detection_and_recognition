@@ -66,3 +66,11 @@ def top_k_acc(output: torch.tensor, target: torch.tensor, k: int = 3):
         for i in range(k):
             correct += torch.sum(pred[:, i] == target).item()
     return correct / len(target)
+
+
+def top_3_acc(output: torch.tensor, target: torch.tensor):
+    return top_k_acc(output, target, k=3)
+
+
+def top_5_acc(output: torch.tensor, target: torch.tensor):
+    return top_k_acc(output, target, k=5)

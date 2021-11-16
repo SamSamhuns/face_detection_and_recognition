@@ -39,7 +39,8 @@
     "loss": "cse",
     "metrics": [
         "accuracy",
-        "top_k_acc"
+        "top_3_acc",
+        "top_5_acc"
     ],
     "lr_scheduler": {
         "type": "ExponentialLR",

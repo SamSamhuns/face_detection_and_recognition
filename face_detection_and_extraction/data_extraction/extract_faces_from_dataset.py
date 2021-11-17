@@ -34,7 +34,7 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
 # ######################## Settings ##################################
 
 CLASS_NAME_TO_LABEL_DICT = read_pickle(
-    "data/custom_video/class_name_to_label.pkl")
+    "data/custom_video_256_train/class_name_to_label.pkl")
 # size of features from one face
 FACE_FEATURE_SIZE = 256
 # max number of faces to consider from each frame for feat ext

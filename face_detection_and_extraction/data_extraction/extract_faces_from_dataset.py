@@ -19,7 +19,8 @@ from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
 from modules.opencv2_dnn.utils import get_bboxes_confs_areas as get_bboxes_confs_areas_cv2
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
-from modules.face_detection_trt_server.inference import TritonServerInferenceSession
+from modules.face_detection_trt_server.inference import TritonServerInferenceSession as face_det_trt_sess
+from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
 from modules.openvino.utils import OVNetwork
 
 
@@ -92,31 +93,49 @@ class Net(object):
             map(int, model_out_size)) if model_out_size is not None else None
 
         self.feat_net_type = feat_net_type
-        if feat_net_type == "MOBILE_FACENET":
+        if feat_net_type == "MOBILE_FACENET_ONNX":
             self.feature_net = onnxruntime.InferenceSession(
-                "weights/mobile_facenet/mobile_facenet.onnx")
-        elif feat_net_type == "FACE_REID_MNV3":
+                "weights/MOBILE_FACENET/MOBILE_FACENET.onnx")
+        elif feat_net_type == "FACE_REID_MNV2":
             self.feature_net = OVNetwork(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)
+        elif feat_net_type == "FACENET_OV":
+            self.feature_net = OVNetwork(
+                xml_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.xml",
+                bin_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.bin",
+                det_thres=None, bbox_area_thres=None, verbose=False)
+        elif feat_net_type == "FACENET_TRT":
+            self.feature_net = face_feat_trt_sess()
         else:
             raise NotImplementedError(
-                f"""{feat_net_type} feature extraction net is not implemented
-                Supported types are ['MOBILE_FACENET', 'FACE_REID_MNV3']""")
+                f"""{feat_net_type} feature extraction net is not implemented""")
 
     def get_face_features(self, face):
-        if self.feat_net_type == "MOBILE_FACENET":
-            feats = self._get_face_features_mobile_facenet(face)
-        elif self.feat_net_type == "FACE_REID_MNV3":
-            feats = self._get_face_features_face_reid(face)
+        if self.feat_net_type == "MOBILE_FACENET_ONNX":
+            feats = self._get_face_features_mobile_facenet_onnx(face)
+        elif self.feat_net_type == "FACE_REID_MNV2":
+            feats = self._get_face_features_openvino(face)
+        elif self.feat_net_type == "FACENET_OV":
+            feats = self._get_face_features_openvino(face)
+        elif self.feat_net_type == "FACENET_TRT":
+            feats = self._get_face_features_trt(face)
         return feats
 
-    def _get_face_features_mobile_facenet(self, face):
+    def _get_face_features_trt(self, face):
         """
-        Get face features with mobile_facenet
+        Get face features with triton server inference
         """
-        # 112, 112 is the input size of mobile_facenet
+        features = self.feature_net.inference_trt_model_facenet(
+            self.feature_net, face, (160, 160))
+        return features
+
+    def _get_face_features_mobile_facenet_onnx(self, face):
+        """
+        Get face features with MOBILE_FACENET_ONNX
+        """
+        # 112, 112 is the input size of MOBILE_FACENET_ONNX
         face = (cv2.resize(face, (112, 112)) - 127.5) / 127.5
         # HWC to BCHW
         face = np.expand_dims(np.transpose(face, (2, 0, 1)),
@@ -124,13 +143,14 @@ class Net(object):
         features = self.feature_net.run(None, {"images": face})  # BGR fmt
         return features[0][0]
 
-    def _get_face_features_face_reid(self, face):
+    def _get_face_features_openvino(self, face):
         """
-        Get face features with face re-identification MobileNet-V2 model
+        Get face features with openvino face feat ext model
+        i.e. face re-identification MobileNet-V2, facenet_20180408_102900
         """
-        feats = self.feature_net.inference_img(
-            face, preprocess_func=cv2.resize)
-        return feats[0].squeeze(axis=-1).squeeze(axis=-1)
+        features = self.feature_net.inference_img(
+            face, preprocess_func=cv2.resize).astype(np.float32)[0]
+        return features.squeeze()
 
 
 class FrameFacesObj(object):
@@ -159,7 +179,7 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
     elif fext == ".onnx":
         face_net = onnxruntime.InferenceSession(model)  # ignores prototxt
     elif fname == "modules/face_detection_trt_server":
-        face_net = TritonServerInferenceSession(det_thres, bbox_area_thres, device=device)
+        face_net = face_det_trt_sess(det_thres, bbox_area_thres, device=device)
     else:
         raise NotImplementedError(
             f"[ERROR] model with extension {fext} not implemented")
@@ -319,7 +339,8 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                         print(
                             f"Skipping {faces_save_dir} as it already exists.")
                         continue
-                    feats_save_path = os.path.join(feats_save_dir, media_root + ".npy")
+                    feats_save_path = os.path.join(
+                        feats_save_dir, media_root + ".npy")
                     if os.path.exists(feats_save_path):  # skip pre-extracted feats
                         print(
                             f"Skipping {feats_save_path} as it already exists.")
@@ -360,7 +381,7 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
         f"Total time taken: {time.time() - init_tm:.2f}s")
     print(
         f"Time for extracting {total_faces_ext} faces is {time.time() - init_tm:.2f}s")
-    if isinstance(net.face_net, TritonServerInferenceSession):
+    if isinstance(net.face_net, face_det_trt_sess):
         print("Shutting down triton-server docker container")
         net.face_net.container.kill()
 
@@ -376,8 +397,9 @@ def main():
                         type=str, default="face_data",
                         help="""Target dataset dir path where
                         imgs will be sep into train & test. (default: %(default)s)""")
-    parser.add_argument("-ft", "--face_feat_type", default="FACE_REID_MNV3",
-                        choices=["FACE_REID_MNV3", "MOBILE_FACENET"],
+    parser.add_argument("-ft", "--face_feat_type", default="FACE_REID_MNV2",
+                        choices=["FACE_REID_MNV2", "MOBILE_FACENET_ONNX",
+                                 "FACENET_OV", "FACENET_TRT"],
                         help="Type of face feature extracter to use for tracking. (default: %(default)s)")
     parser.add_argument("-is", "--input_size",
                         nargs=2,

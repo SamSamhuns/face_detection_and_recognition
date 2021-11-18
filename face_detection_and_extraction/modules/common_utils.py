@@ -80,7 +80,8 @@ def get_argparse(*args, **kwargs):
 
 
 def fix_path_for_globbing(dir):
-    """ Add * at the end of paths for proper globbing
+    """
+    Add * at the end of paths for proper globbing
     """
     if dir[-1] == '/':         # data/
         dir += '*'
@@ -176,7 +177,9 @@ def pad_resize_image(cv2_img, new_size=(640, 480), color=(125, 125, 125)) -> np.
 
 
 def clip_coords(boxes, img_shape):
-    # Clip bounding xyxy bounding boxes to image shape (height, width)
+    """
+    Clip bounding xyxy bounding boxes to image shape (height, width)
+    """
     if isinstance(boxes, np.ndarray):
         boxes[:, 0].clip(0, img_shape[1], out=boxes[:, 0])  # x1
         boxes[:, 1].clip(0, img_shape[0], out=boxes[:, 1])  # y1
@@ -190,7 +193,9 @@ def clip_coords(boxes, img_shape):
 
 
 def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
-    # Rescale coords (xyxy) from img1_shape to img0_shape
+    """
+    Rescale coords (xyxy) from img1_shape to img0_shape
+    """
     if ratio_pad is None:  # calculate from img0_shape
         gain = min(img1_shape[0] / img0_shape[0],
                    img1_shape[1] / img0_shape[1])
@@ -205,6 +210,25 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     coords[:, :4] /= gain
     clip_coords(coords, img0_shape)
     return coords
+
+
+def standardize_image(cv2_img, new_dtype=np.float32):
+    """
+    Linearly scales each image in image to have mean 0 and variance 1. or prewhiten image
+    """
+    if cv2_img.ndim == 4:
+        axis = (1, 2, 3)
+        size = cv2_img[0].size
+    elif cv2_img.ndim == 3:
+        axis = (0, 1, 2)
+        size = cv2_img.size
+    else:
+        raise ValueError('Dimension should be 3 or 4')
+    mean = np.mean(cv2_img, axis=axis, keepdims=True)
+    std = np.std(cv2_img, axis=axis, keepdims=True)
+    std_adj = np.maximum(std, 1.0 / np.sqrt(size))
+    std_img = (cv2_img - mean) / std_adj
+    return std_img.astype(new_dtype)
 
 
 # ##################### bouding box utils ######################### #
@@ -247,7 +271,8 @@ def draw_bbox_on_image(cv2_img, boxes, bbox_confs, bbox_areas, line_thickness=No
         else:
             label = f"{bbox_confs[i]:.2f}_{bbox_areas[i]:.2f}"
         xmin, ymin, xmax, ymax = map(int, box)
-        xmin, ymin, xmax, ymax = max(xmin, 0), max(ymin, 0), min(xmax, w), min(ymax, h)
+        xmin, ymin, xmax, ymax = max(xmin, 0), max(
+            ymin, 0), min(xmax, w), min(ymax, h)
         # draw bbox on image
         cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=max(
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
@@ -282,7 +307,7 @@ def get_distinct_rgb_color(index):
     Get a RGB color from a pre-defined colors list
     """
     color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0),
-                  (255, 0, 255),  (0, 255, 255), (0, 0, 0), (128, 0, 0),
+                  (255, 0, 255), (0, 255, 255), (0, 0, 0), (128, 0, 0),
                   (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128),
                   (0, 128, 128), (128, 128, 128), (192, 0, 0), (0, 192, 0),
                   (0, 0, 192), (192, 192, 0), (192, 0, 192), (0, 192, 192),

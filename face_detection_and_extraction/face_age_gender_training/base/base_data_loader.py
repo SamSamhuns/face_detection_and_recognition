@@ -23,7 +23,8 @@ class BaseDataLoader(DataLoader):
             'batch_size': batch_size,
             'shuffle': self.shuffle,
             'collate_fn': collate_fn,
-            'num_workers': num_workers
+            'num_workers': num_workers,
+            'drop_last': True
         }
         super().__init__(sampler=self.sampler, **self.init_kwargs)
 

@@ -67,10 +67,10 @@ def get_argparse(*args, **kwargs):
                         default="weights/face_detection_caffe/deploy.prototxt.txt",
                         help="Path to 'deploy' prototxt file. (default: %(default)s)")
     parser.add_argument("-dt", "--det_thres",
-                        type=float, default=0.72,
+                        type=float, default=0.70,
                         help='score to filter weak detections. (default: %(default)s)')
     parser.add_argument("-at", "--bbox_area_thres",
-                        type=float, default=0.15,
+                        type=float, default=0.12,
                         help='score to filter bboxes that cover small area perc. (default: %(default)s)')
     parser.add_argument('-d', "--device", default="cpu",
                         choices=["cpu", "gpu"],

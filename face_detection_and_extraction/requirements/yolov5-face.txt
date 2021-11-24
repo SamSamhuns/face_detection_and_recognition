@@ -1,11 +1,12 @@
 -r common.txt
-thop==0.0.31.post2005241907
-torch==1.10.0
-torchvision==0.11.1
 matplotlib==3.4.3
 onnx==1.10.1
 onnx-simplifier==0.3.6
 onnxruntime==1.9.0
 Pillow==8.3.2
 PyYAML==5.4.1
+requests==2.26.0
 seaborn==0.11.2
+thop==0.0.31.post2005241907
+torch==1.10.0
+torchvision==0.11.1

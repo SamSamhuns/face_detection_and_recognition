@@ -50,9 +50,13 @@ def train(config: ConfigParser):
     if len(device_ids) > 1:
         model = torch.nn.DataParallel(model, device_ids=device_ids)
 
-    # get function handles of loss and metrics
+    # get function handles of loss and train_metrics
     criterion = getattr(module_loss, config['loss'])
-    metrics = [getattr(module_metric, met) for met in config['metrics']]
+    if "acc_per_class" in config['train_metrics']:
+        raise ValueError("""Metric acc_per_class is only avialable for training.\n
+                         It is NOT supported for training/validation""")
+    train_metrics = [getattr(module_metric, met)
+                     for met in config['train_metrics']]
 
     # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
@@ -60,7 +64,7 @@ def train(config: ConfigParser):
     lr_scheduler = config.init_obj(
         'lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
-    trainer = Trainer(model, criterion, metrics, optimizer,
+    trainer = Trainer(model, criterion, train_metrics, optimizer,
                       config=config,
                       device=device,
                       data_loader=data_loader,

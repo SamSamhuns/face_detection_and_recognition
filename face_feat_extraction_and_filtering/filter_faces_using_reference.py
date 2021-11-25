@@ -126,28 +126,19 @@ def main():
         filtered_face_data_path struct
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-ud',
-                        '--unfiltered_face_data_path',
-                        type=str,
-                        required=True,
+    parser.add_argument('-ud', '--unfiltered_face_data_path',
+                        type=str, required=True,
                         help='Unfiltered raw face dataset path with class imgs in subdirs')
-    parser.add_argument('-rd',
-                        '--reference_face_data_path',
-                        type=str,
-                        required=True,
-                        help='Reference face dataset path with 32 class imgs in each subdirs that are manually prefiltered')
-    parser.add_argument('-td',
-                        '--target_data_path',
-                        type=str,
-                        required=False,
-                        default="",
+    parser.add_argument('-rd', '--ref_face_data_path',
+                        type=str, required=True,
+                        help='Reference face dataset path with class imgs in each subdirs that are manually prefiltered')
+    parser.add_argument('-td', '--target_data_path',
+                        type=str, required=False,
                         help='Dataset path where subdirs clean and unclean contain respective filtered classes')
-    parser.add_argument('-m',
-                        '--h5_model_path',
+    parser.add_argument('-m', '--h5_model_path',
                         type=str,
-                        required=False,
                         default="models/facenet/facenet_keras.h5",
-                        help='Path to h5 model file')
+                        help='Path to h5 feat feature extraction model. (default: %(default)s)')
     args = parser.parse_args()
     model = tf.keras.models.load_model(args.h5_model_path, compile=False)
 

@@ -37,10 +37,16 @@
         }
     },
     "loss": "cse",
-    "metrics": [
+    "train_metrics": [
         "accuracy",
         "top_3_acc",
         "top_5_acc"
+    ],
+    "test_metrics": [
+        "accuracy",
+        "top_3_acc",
+        "top_5_acc",
+        "accuracy_per_class"
     ],
     "lr_scheduler": {
         "type": "ExponentialLR",

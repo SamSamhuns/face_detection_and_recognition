@@ -1,5 +1,6 @@
 import argparse
 from tqdm import tqdm
+from functools import partial
 
 import torch
 import numpy as np
@@ -39,9 +40,15 @@ def test(config: ConfigParser, checkpoint: str) -> dict:
     model = config.init_obj('arch', module_arch)
     logger.info(model)
 
-    # get function handles of loss and metrics
+    # get function handles of loss and test_metrics
     loss_fn = getattr(module_loss, config['loss'])
-    metric_fns = [getattr(module_metric, met) for met in config['metrics']]
+    n_cls = config['data_loader']['args']['num_classes']
+    # must pass num_classes if accuracy_per_class metric is used
+    met_func_dict = {met: partial(getattr(module_metric, met), num_classes=n_cls) if met == "acc_per_class"
+                     else getattr(module_metric, met)
+                     for met in config['test_metrics']}
+    met_val_dict = {met: np.zeros(n_cls) if met == "acc_per_class"
+                    else 0. for met in config['test_metrics']}
 
     logger.info(f'Loading checkpoint: {checkpoint} ...')
     checkpoint = torch.load(checkpoint)
@@ -59,8 +66,6 @@ def test(config: ConfigParser, checkpoint: str) -> dict:
     model.eval()
 
     total_loss = 0.0
-    total_metrics = torch.zeros(len(metric_fns))
-
     with torch.no_grad():
         for i, (data, target) in tqdm(enumerate(data_loader)):
             data, target = data.to(device), target.to(device)
@@ -75,17 +80,18 @@ def test(config: ConfigParser, checkpoint: str) -> dict:
 
             batch_size = data.shape[0]
             total_loss += loss.item() * batch_size
-            for i, metric in enumerate(metric_fns):
-                total_metrics[i] += metric(output, target) * batch_size
+            for met, met_func in met_func_dict.items():
+                met_val = met_func(output, target) * batch_size
+                met_val_dict[met] += met_val
 
     n_samples = len(data_loader.sampler)
     if n_samples == 0:
-        raise Exception(f"Test dataset {config['data_loader']['args']['dataset_test']} is missing or empty")
+        raise Exception(
+            f"Test dataset {config['data_loader']['args']['dataset_test']} is missing or empty")
 
     log = {'loss': total_loss / n_samples}
     log.update({
-        met.__name__: total_metrics[i].item() / n_samples for i, met in enumerate(metric_fns)
-    })
+        met: met_val / n_samples for met, met_val in met_val_dict.items()})
     logger.info(f"test: {log}")
     return log
 

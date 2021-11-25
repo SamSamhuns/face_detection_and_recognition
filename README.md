@@ -47,9 +47,9 @@ Performance recorded with same parameters as face-detection above.
 
 Instructions inside `face_detection_and_extraction` for face detection in images, video, and webcam feed along with face extraction from a dataset of images.
 
-## Face Feat Extraction and Filtering for faces of the same person
+## Similar Face Filtering for faces of the same person
 
-Instructions inside `face_feat_extraction_and_filtering` for face feat extraction and face similarity extraction.
+Instructions inside `similar_face_filtering` on filtering similar faces from  a face set using a reference face set.
 
 ### Acknowledgements
 

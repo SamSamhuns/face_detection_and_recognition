@@ -54,9 +54,9 @@ class TritonPythonModel:
                 outputx, num_classes=1, conf_thres=0.4, nms_thres=0.3)
 
             mow, moh = self.model_face_out_size
-            # offsets for faces
-            tx, ty = -6, -1
-            bx, by = 4, 5
+            # offsets for faces if required
+            tx, ty = 0, 0
+            bx, by = 0, 0
             h, w = input_image.shape[:2]
             detections = detections[0]
             face_list = []

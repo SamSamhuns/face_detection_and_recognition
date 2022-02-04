@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 import numpy as np
@@ -58,7 +57,6 @@ class TritonServerInferenceSession(object):
                 for i in range(5):
                     print(f"Model not ready. Reattempting after {5-i} sec...")
                     time.sleep(1)
-                    os.system('clear')
             else:
                 break
         if model_info == -1:  # error getting model info

@@ -1,4 +1,3 @@
-import os
 import cv2
 import sys
 import time
@@ -19,7 +18,8 @@ class TritonServerInferenceSession(object):
                  model_name="facenet",
                  container_name="facenet_feat_ext",
                  model_ping_retries=100,
-                 device="gpu"):
+                 device="gpu",
+                 port=8090):
         if device != "gpu":
             raise ValueError(
                 f"{device} device mode is not supported. Only `gpu` mode is supported")
@@ -27,7 +27,7 @@ class TritonServerInferenceSession(object):
         self.FLAGS.model_name = model_name
         self.FLAGS.model_version = ""  # empty str means use latest
         self.FLAGS.protocol = "grpc"
-        self.FLAGS.url = '127.0.0.1:8081'
+        self.FLAGS.url = f'127.0.0.1:{port}'
         self.FLAGS.verbose = False
         self.FLAGS.classes = 0  # classes must be set to 0
         self.FLAGS.batch_size = 1
@@ -46,7 +46,7 @@ class TritonServerInferenceSession(object):
         # start triton-server docker container
         self.container = docker.run(image="facenet_feat_extraction:latest", name=container_name,
                                     shm_size='1g', ulimit=['memlock=-1', 'stack=67108864'],
-                                    gpus=None, detach=True, publish=[(8081, 8081)])
+                                    gpus=None, detach=True, publish=[(port, 8081)])
         # wait for container to start
         for _ in range(model_ping_retries):
             model_info = get_client_and_model_metadata_config(self.FLAGS)
@@ -54,7 +54,6 @@ class TritonServerInferenceSession(object):
                 for i in range(5):
                     print(f"Model not ready. Reattempting after {5-i} sec...")
                     time.sleep(1)
-                    os.system('clear')
             else:
                 break
         if model_info == -1:  # error getting model info

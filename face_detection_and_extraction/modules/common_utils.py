@@ -56,10 +56,10 @@ def get_argparse(*args, **kwargs):
     """
     parser = ArgumentParserMod(*args, **kwargs)
     parser.add_argument("-i", "--input_src", default='0',
-                        help="Path to input image/video/cam_index:\n" +
-                             "\t IMAGE_DDOE       -i <PATH_TO_IMG>\n" +
-                             "\t VIDEO_MODE       -i <PATH_TO_VID>\n" +
-                             "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n")
+                        help=("Path to input image/video/cam_index:\n"
+                              "\t IMAGE_DDOE       -i <PATH_TO_IMG>\n"
+                              "\t VIDEO_MODE       -i <PATH_TO_VID>\n"
+                              "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n"))
     parser.add_argument("-m", "--model",
                         default="weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
                         help='Path to model file. (default: %(default)s)')

@@ -1,8 +1,9 @@
--r face_detection_and_extraction/common.txt
--r face_detection_and_extraction/mtcnn.txt
--r face_detection_and_extraction/blazeface.txt
--r face_detection_and_extraction/opencv.txt
--r face_detection_and_extraction/openvino.txt
--r face_detection_and_extraction/yolov5-face.txt
--r face_detection_and_extraction/age_gender_training.txt
+-r face_detection_and_extraction/requirements/common.txt
+-r face_detection_and_extraction/requirements/blazeface.txt
+-r face_detection_and_extraction/requirements/mobile_facenet.txt
+-r face_detection_and_extraction/requirements/mtcnn.txt
+-r face_detection_and_extraction/requirements/opencv.txt
+-r face_detection_and_extraction/requirements/openvino.txt
+-r face_detection_and_extraction/requirements/trt_server.txt
+-r face_detection_and_extraction/requirements/yolov5-face.txt
 -r similar_face_filtering/requirements.txt

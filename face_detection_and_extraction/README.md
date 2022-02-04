@@ -65,7 +65,7 @@ example target data path = "target_data/dataset"
 ## Face Extraction from dataset
 
 ```shell
-$ python data_extraction/extract_faces_img_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
+$ python data_extraction/extract_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
 ```
 
 ## Face Extraction and Labelling from dataset
@@ -115,14 +115,4 @@ Annotation data is also saved in the following pickle format:
 
 ```shell
 $ python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
-```
-
-## Face Age and Gender training
-
-```shell
-$ cd face_age_gender_training
-# set up hyper-parameters in hp_tuning_{age/gender}.json
-$ python hp_tuning.py -c JSON_CONFIG_FILE_PATH
-# set up parameters in train_{age/gender}.json based on tuned hyperparameter
-$ python train.py -c JSON_CONFIG_FILE_PATH
 ```

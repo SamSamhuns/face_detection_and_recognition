@@ -1,6 +1,3 @@
-#  splits a directory with object classes in different subdirectories into
-#  train, test and optionally val sub-directory with the same class sub-dir
-#  structure
 import os
 import sys
 import cv2

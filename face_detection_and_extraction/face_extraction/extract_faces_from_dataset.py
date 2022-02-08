@@ -1,6 +1,3 @@
-#  splits a directory with object classes in different subdirectories into
-#  train, test and optionally val sub-directory with the same class sub-dir
-#  structure
 import os
 import cv2
 import sys
@@ -8,6 +5,7 @@ import glob
 import time
 import logging
 import mimetypes
+import traceback
 import onnxruntime
 import numpy as np
 from tqdm import tqdm
@@ -21,6 +19,8 @@ from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
 from modules.face_detection_trt_server.inference import TritonServerInferenceSession as face_det_trt_sess
 from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
+from modules.facenet_age_trt_server.inference import TritonServerInferenceSession as face_age_trt_sess
+from modules.facenet_gender_trt_server.inference import TritonServerInferenceSession as face_gender_trt_sess
 from modules.openvino.utils import OVNetwork
 
 
@@ -34,12 +34,11 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
 
 # ######################## Settings ##################################
 
-CLASS_NAME_TO_LABEL_DICT = read_pickle(
-    "data/custom_video_256_train/class_name_to_label.pkl")
+CLASS_NAME_TO_LABEL_DICT = read_pickle("data/custom_video_256_train/class_name_to_label.pkl")
 # size of features from one face
 FACE_FEATURE_SIZE = 256
 # max number of faces to consider from each frame for feat ext
-MAX_N_FACES_PER_FRAME = 5
+MAX_N_FACES_PER_FRAME = 3
 # max number of frames from which faces are extracted
 MAX_N_FRAME_FROM_VID = 20
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
@@ -66,6 +65,7 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
 class Net(object):
     __slots__ = ["face_net", "feature_net", "inf_func", "bbox_conf_area_func",
                  "feat_net_type", "det_thres", "bbox_area_thres",
+                 "face_age_net", "face_gender_net",
                  "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE"]
 
     def __init__(self, face_net, feat_net_type,
@@ -108,19 +108,41 @@ class Net(object):
                 det_thres=None, bbox_area_thres=None, verbose=False)
         elif feat_net_type == "FACENET_TRT":
             self.feature_net = face_feat_trt_sess()
+        elif feat_net_type == "FACENET_AGE_GENDER":
+            self.face_age_net = face_age_trt_sess()
+            self.face_gender_net = face_gender_trt_sess()
+        elif feat_net_type == "CAFFE_AGE_GENDER":
+            # TODO complete this
+            self.face_age_net = None
+            self.face_gender_net = None
         else:
             raise NotImplementedError(
                 f"""{feat_net_type} feature extraction net is not implemented""")
 
     def get_face_features(self, face):
-        if self.feat_net_type == "MOBILE_FACENET_ONNX":
+        if self.feat_net_type == "MOBILE_FACENET_ONNX":   # out shape 512
             feats = self._get_face_features_mobile_facenet_onnx(face)
-        elif self.feat_net_type == "FACE_REID_MNV2":
+        elif self.feat_net_type == "FACE_REID_MNV2":      # out shape 256
             feats = self._get_face_features_openvino(face)
-        elif self.feat_net_type == "FACENET_OV":
+        elif self.feat_net_type == "FACENET_OV":          # out shape 512
             feats = self._get_face_features_openvino(face)
-        elif self.feat_net_type == "FACENET_TRT":
+        elif self.feat_net_type == "FACENET_TRT":         # out shape 128
             feats = self._get_face_features_trt(face)
+        elif self.feat_net_type == "FACENET_AGE_GENDER":  # out shape 6 (2+4)
+            feats = self._get_face_age_gender_trt(face)
+        # TODO add CAFFE_AGE_GENDER
+        return feats
+
+    def _get_face_age_gender_trt(self, face):
+        """
+        Get face age and gender concatenated features with triton server inference
+        """
+        pred_age = self.face_age_net.inference_trt_model_facenet(
+            self.face_age_net, face, (160, 160))
+        pred_gender = self.face_gender_net.inference_trt_model_facenet(
+            self.face_gender_net, face, (160, 160))
+        # feats = np.asarray([np.argmax(pred_age), np.argmax(pred_gender)])
+        feats = np.concatenate([pred_age, pred_gender], axis=None)
         return feats
 
     def _get_face_features_trt(self, face):
@@ -206,7 +228,7 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
                model_in_size, model_out_size)
 
 
-def extract_face_feat_conf_area_list(net, img):
+def extract_face_feat_conf_area_list(net, img, save_feat):
     """returns a tuple of two lists: cv2 images containing faces, conf of said face dets
     """
     if isinstance(img, str):
@@ -225,6 +247,7 @@ def extract_face_feat_conf_area_list(net, img):
     boxes, confs, areas = net.bbox_conf_area_func(
         detections, net.det_thres, net.bbox_area_thres, orig_size=(w, h), in_size=(iw, ih))
 
+    # face bbox offsets
     tx, ty = -6, -1
     bx, by = 4, 5
 
@@ -241,7 +264,8 @@ def extract_face_feat_conf_area_list(net, img):
         face = image[y:yh, x:xw].copy()
         if net.FACE_MODEL_OUTPUT_SIZE is not None:
             face = cv2.resize(face, (net.FACE_MODEL_OUTPUT_SIZE))
-        feat_list.append(net.get_face_features(face.copy()))
+        if save_feat:
+            feat_list.append(net.get_face_features(face.copy()))
         face_list.append(face)
     return face_list, feat_list, confs, areas
 
@@ -312,6 +336,7 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
         if not os.path.isdir(dir):       # skip if path is not a dir
             continue
         class_name = dir.split("/")[-1]  # get class name
+        print(f"Faces will be extracted from class {class_name}")
         file_path_list = [file for file in glob.glob(dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
 
@@ -330,7 +355,7 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                 mtype = get_file_type(media_path)
                 if mtype == "image":
                     faces, feats, confs, areas = extract_face_feat_conf_area_list(
-                        net, media_path)
+                        net, media_path, save_feat)
                     frames_faces_obj_list.append(FrameFacesObj(
                         1, 1, faces, feats, confs, areas))
                 elif mtype == "video":
@@ -358,7 +383,7 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                             if save_frames_num > MAX_N_FRAME_FROM_VID:
                                 break
                             faces, feats, confs, areas = extract_face_feat_conf_area_list(
-                                net, frame)
+                                net, frame, save_feat)
                             frames_faces_obj_list.append(FrameFacesObj(
                                 frame_num, frame_num // step, faces, feats, confs, areas))
                         ret, frame = cap.read()
@@ -371,6 +396,7 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                 class_media_ext += 1
             except Exception as e:
                 print(f"{e}. Extraction failed for media {media_path}")
+                traceback.print_exc()
         total_faces_ext += class_faces_ext
         total_media_ext += class_media_ext
         logging.info(
@@ -399,7 +425,7 @@ def main():
                         imgs will be sep into train & test. (default: %(default)s)""")
     parser.add_argument("-ft", "--face_feat_type", default="FACE_REID_MNV2",
                         choices=["FACE_REID_MNV2", "MOBILE_FACENET_ONNX",
-                                 "FACENET_OV", "FACENET_TRT"],
+                                 "FACENET_OV", "FACENET_TRT", "FACENET_AGE_GENDER"],
                         help="Type of face feature extracter to use for tracking. (default: %(default)s)")
     parser.add_argument("-is", "--input_size",
                         nargs=2,
@@ -410,10 +436,10 @@ def main():
                         help='Output face images are resized to this (width, height) -os 112 112. (default: %(default)s).')
     parser.add_argument('-noface', '--dont_save_face',
                         action="store_false",
-                        help="""Flag avoids saving faces if set (default: %(default)s).""")
+                        help="""Flag avoids saving faces if set.""")
     parser.add_argument('-nofeat', '--dont_save_feat',
                         action="store_false",
-                        help="""Flag avoids saving face feats if set (default: %(default)s).""")
+                        help="""Flag avoids saving face feats if set.""")
     args = parser.parse_args()
     logging.info(f"Arguments used: {args}")
     print("Current Arguments: ", args)
@@ -425,7 +451,6 @@ def main():
                    model_in_size=args.input_size,
                    model_out_size=args.output_size,
                    device=args.device)
-
     filter_faces_from_data(args.source_datadir_path,
                            args.target_datadir_path,
                            net,

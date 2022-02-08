@@ -29,7 +29,7 @@ logging.basicConfig(filename=f'logs/face_feat_ext_stats_{year}{month}{day}_{hour
 # ######################## Settings ##################################
 
 CLASS_NAME_TO_LABEL_DICT = read_pickle(
-    "data/feat_256_train_age/class_name_to_label.pkl")
+    "data/class_name_to_label.pkl")
 CLASSES_TO_EXCLUDE = {}
 
 # size of features from one face

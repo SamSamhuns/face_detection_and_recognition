@@ -98,7 +98,7 @@ class Net(object):
                 det_thres=None, bbox_area_thres=None, verbose=False)
         else:
             raise NotImplementedError(
-                f"{feat_net_type} feature extraction net is not implemented" +
+                f"{feat_net_type} feature extraction net is not implemented."
                 "Supported types are ['MOBILE_FACENET', 'FACE_REID_MNV3']")
 
     def check_if_face_exists(self, new_feat, new_bbox):

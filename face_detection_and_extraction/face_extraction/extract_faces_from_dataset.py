@@ -12,7 +12,7 @@ from tqdm import tqdm
 from datetime import datetime
 
 sys.path.append(".")
-from modules.common_utils import get_argparse, get_file_type, fix_path_for_globbing, check_img_size, read_pickle
+from modules.common_utils import get_argparse, get_file_type, check_img_size, read_pickle
 from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
 from modules.opencv2_dnn.utils import get_bboxes_confs_areas as get_bboxes_confs_areas_cv2
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
@@ -24,7 +24,6 @@ from modules.facenet_gender_trt_server.inference import TritonServerInferenceSes
 from modules.openvino.utils import OVNetwork
 
 
-mimetypes.init()
 today = datetime.today()
 year, month, day, hour, minute, sec = today.year, today.month, today.day, today.hour, today.minute, today.second
 
@@ -33,19 +32,15 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
                     level=logging.INFO)
 
 # ######################## Settings ##################################
-
-CLASS_NAME_TO_LABEL_DICT = read_pickle("data/custom_video_256_train/class_name_to_label.pkl")
-# size of features from one face
-FACE_FEATURE_SIZE = 256
+CLASS_NAME_TO_LABEL_DICT = read_pickle("data/class_name_to_label.pkl")
 # max number of faces to consider from each frame for feat ext
 MAX_N_FACES_PER_FRAME = 3
 # max number of frames from which faces are extracted
-MAX_N_FRAME_FROM_VID = 20
+MAX_N_FRAME_FROM_VID = 15
 VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
                    'mp4', 'avi'}
 
-
-# #################### Raw Data Organization #########################
+# ######################## Raw Data Organization ###############################
 #        dataset
 #              |_ class_1
 #                        |_ {img1/vid1}
@@ -56,17 +51,19 @@ VALID_FILE_EXTS = {'jpg', 'jpeg', 'png', 'ppm', 'bmp', 'pgm',
 #                        |_ {img2/vid2}
 #                        |_ ....
 #              ...
-#
-# example raw data path    = "raw_data/dataset"
-# example target data path = "target_data/dataset"
-# ###################################################################
+# ##############################################################################
+
+mimetypes.init()
 
 
 class Net(object):
     __slots__ = ["face_net", "feature_net", "inf_func", "bbox_conf_area_func",
                  "feat_net_type", "det_thres", "bbox_area_thres",
                  "face_age_net", "face_gender_net",
-                 "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE"]
+                 "FACE_MODEL_MEAN_VALUES",
+                 "FACE_MODEL_INPUT_SIZE",
+                 "FACE_MODEL_OUTPUT_SIZE",
+                 "FACE_FEATURE_SIZE"]
 
     def __init__(self, face_net, feat_net_type,
                  inf_func, bbox_conf_area_func,
@@ -95,26 +92,32 @@ class Net(object):
         self.feat_net_type = feat_net_type
         if feat_net_type == "MOBILE_FACENET_ONNX":
             self.feature_net = onnxruntime.InferenceSession(
-                "weights/MOBILE_FACENET/MOBILE_FACENET.onnx")
+                "weights/mobile_facenet/mobile_facenet.onnx")
+            self.FACE_FEATURE_SIZE = 512
         elif feat_net_type == "FACE_REID_MNV2":
             self.feature_net = OVNetwork(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)
+            self.FACE_FEATURE_SIZE = 256
         elif feat_net_type == "FACENET_OV":
             self.feature_net = OVNetwork(
                 xml_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.xml",
                 bin_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)
+            self.FACE_FEATURE_SIZE = 512
         elif feat_net_type == "FACENET_TRT":
             self.feature_net = face_feat_trt_sess()
+            self.FACE_FEATURE_SIZE = 128
         elif feat_net_type == "FACENET_AGE_GENDER":
             self.face_age_net = face_age_trt_sess()
             self.face_gender_net = face_gender_trt_sess()
+            self.FACE_FEATURE_SIZE = 6
         elif feat_net_type == "CAFFE_AGE_GENDER":
             # TODO complete this
             self.face_age_net = None
             self.face_gender_net = None
+            self.FACE_FEATURE_SIZE = 10
         else:
             raise NotImplementedError(
                 f"""{feat_net_type} feature extraction net is not implemented""")
@@ -270,7 +273,9 @@ def extract_face_feat_conf_area_list(net, img, save_feat):
     return face_list, feat_list, confs, areas
 
 
-def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_face, faces_save_dir, save_feat, feats_save_dir):
+def save_extracted_faces(frames_faces_obj_list, media_root, class_name,
+                         save_face, faces_save_dir,
+                         save_feat, feats_save_dir, face_feature_size):
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
@@ -292,7 +297,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_fac
             # zero-pad if num of faces less than faces_per_frame
             if len(feats) < MAX_N_FACES_PER_FRAME:
                 face_diff = MAX_N_FACES_PER_FRAME - len(feats)
-                feats.extend([np.zeros(FACE_FEATURE_SIZE)
+                feats.extend([np.zeros(face_feature_size)
                               for _ in range(face_diff)])
             feats_list.extend(feats)
 
@@ -316,7 +321,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_fac
     if save_feat:
         if len(frames_faces_obj_list) < MAX_N_FRAME_FROM_VID:
             frame_diff = MAX_N_FRAME_FROM_VID - len(frames_faces_obj_list)
-            feats_list.extend([np.zeros(FACE_FEATURE_SIZE)
+            feats_list.extend([np.zeros(face_feature_size)
                                for _ in range(MAX_N_FACES_PER_FRAME)] * frame_diff)
         annot_dict["feature"] = np.concatenate(
             feats_list, axis=0).astype(np.float32)
@@ -327,15 +332,18 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_fac
 
 def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
     init_tm = time.time()
-    dir_list = glob.glob(fix_path_for_globbing(source_dir))
+    dir_list = glob.glob(os.path.join(source_dir, "*"))
 
     total_media_ext, total_faces_ext = 0, 0
+    skip_class = set([])
     # for each class in raw data
     for i in tqdm(range(len(dir_list))):
         dir = dir_list[i]                # get path to class dir
         if not os.path.isdir(dir):       # skip if path is not a dir
             continue
         class_name = dir.split("/")[-1]  # get class name
+        if class_name in skip_class:
+            continue
         print(f"Faces will be extracted from class {class_name}")
         file_path_list = [file for file in glob.glob(dir + "/*")
                           if file.split(".")[-1] in VALID_FILE_EXTS]
@@ -348,7 +356,7 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                 faces_save_dir = os.path.join(
                     target_dir, "faces", class_name)
                 feats_save_dir = os.path.join(
-                    target_dir, f"npy_feat_{FACE_FEATURE_SIZE}", class_name)
+                    target_dir, f"npy_feat_{net.FACE_FEATURE_SIZE}", class_name)
 
                 frames_faces_obj_list = []
                 media_root = os.path.basename(media_path).split('.')[0]
@@ -391,7 +399,8 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
                     cv2.destroyAllWindows()
 
                 faces_extracted = save_extracted_faces(
-                    frames_faces_obj_list, media_root, class_name, save_face, faces_save_dir, save_feat, feats_save_dir)
+                    frames_faces_obj_list, media_root, class_name, save_face,
+                    faces_save_dir, save_feat, feats_save_dir, net.FACE_FEATURE_SIZE)
                 class_faces_ext += faces_extracted
                 class_media_ext += 1
             except Exception as e:

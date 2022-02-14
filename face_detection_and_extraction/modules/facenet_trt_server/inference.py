@@ -46,7 +46,7 @@ class TritonServerInferenceSession(object):
         # start triton-server docker container
         self.container = docker.run(image="facenet_feat_extraction:latest", name=container_name,
                                     shm_size='1g', ulimit=['memlock=-1', 'stack=67108864'],
-                                    gpus=None, detach=True, publish=[(port, 8081)])
+                                    gpus='1', detach=True, publish=[(port, 8081)])
         # wait for container to start
         for _ in range(model_ping_retries):
             model_info = get_client_and_model_metadata_config(self.FLAGS)

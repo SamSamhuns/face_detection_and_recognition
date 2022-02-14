@@ -10,7 +10,7 @@ from datetime import datetime
 
 sys.path.append(".")
 from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
-from modules.common_utils import get_argparse, fix_path_for_globbing, get_file_type
+from modules.common_utils import get_argparse, get_file_type
 from modules.yolov5_face.onnx.onnx_utils import check_img_size
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
@@ -363,7 +363,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name, save_fac
 
 
 def filter_faces_from_data(source_dir, target_dir, net):
-    class_dir_list = glob.glob(fix_path_for_globbing(source_dir))
+    class_dir_list = glob.glob(os.path.join(source_dir, "*"))
 
     total_media_ext, total_faces_ext = 0, 0
     # for each class in raw data

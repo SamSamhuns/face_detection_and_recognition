@@ -79,19 +79,6 @@ def get_argparse(*args, **kwargs):
     return parser
 
 
-def fix_path_for_globbing(dir):
-    """
-    Add * at the end of paths for proper globbing
-    """
-    if dir[-1] == '/':         # data/
-        dir += '*'
-    elif dir[-1] != '*':       # data
-        dir += '/*'
-    else:                      # data/*
-        dir = dir
-    return dir
-
-
 def get_file_type(file_src):
     """
     Returns if a file is image/video/camera/None based on extension or int type

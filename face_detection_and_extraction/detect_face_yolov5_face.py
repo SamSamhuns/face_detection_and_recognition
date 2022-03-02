@@ -92,8 +92,8 @@ def inference_webcam(net, cam_index):
 def main():
     parser = get_argparse(
         description="YOLOv5-face face detection", conflict_handler='resolve')
-    parser.remove_argument("prototxt")
-    parser.add_argument("-m", "--model",
+    parser.remove_argument(["model", "prototxt"])
+    parser.add_argument("-md", "--model",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')
     parser.add_argument("-is", "--input_size",

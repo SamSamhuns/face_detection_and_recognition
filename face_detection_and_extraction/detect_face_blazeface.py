@@ -121,19 +121,20 @@ def inference_webcam(net, runtime, back_model, cam_index, threshold):
 def main():
     parser = get_argparse(
         description="Blazeface face detection", conflict_handler='resolve')
-    parser.remove_arguments(["prototxt", "bbox_area_thres"])
-    parser.add_argument("-m", "--model",
+    parser.remove_arguments(["model", "prototxt", "bbox_area_thres"])
+    parser.add_argument("-md", "--model",
                         default="weights/blazeface/blazefaceback.pth",
-                        help='Path to weight file (.pth/.onnx). (default: %(default)s). ' +
-                        'anchors should be placed in the same dir as weights. ' +
-                        'anchorsback.npy for back_model == True else anchors.npy')
+                        help=('Path to weight file (.pth/.onnx). (default: %(default)s). '
+                              'anchors should be placed in the same dir as weights. '
+                              'anchorsback.npy for back_model == True else anchors.npy'))
     args = parser.parse_args()
 
     net, runtime, back_model = load_net(args.model)
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, runtime, back_model, int(args.input_src), args.det_thres)
+        inference_webcam(net, runtime, back_model,
+                         int(args.input_src), args.det_thres)
     elif input_type == "video":
         inference_vid(net, runtime, back_model, args.input_src, args.det_thres)
     elif input_type == "image":

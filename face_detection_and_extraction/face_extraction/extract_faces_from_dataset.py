@@ -62,13 +62,12 @@ class Net(object):
                  "face_age_net", "face_gender_net",
                  "FACE_MODEL_MEAN_VALUES",
                  "FACE_MODEL_INPUT_SIZE",
-                 "FACE_MODEL_OUTPUT_SIZE",
                  "FACE_FEATURE_SIZE"]
 
     def __init__(self, face_net, feat_net_type,
                  inf_func, bbox_conf_area_func,
                  det_thres, bbox_area_thres,
-                 model_in_size=(640, 640), model_out_size=None):
+                 model_in_size=(640, 640)):
         self.face_net = face_net
         self.inf_func = inf_func
         self.bbox_conf_area_func = bbox_conf_area_func
@@ -84,10 +83,6 @@ class Net(object):
                 map(check_img_size, model_in_size))
         # only for cv2 models
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
-        # (width, height), size the detected faces are resized
-        # if None, no resizing is done
-        self.FACE_MODEL_OUTPUT_SIZE = tuple(
-            map(int, model_out_size)) if model_out_size is not None else None
 
         self.feat_net_type = feat_net_type
         if feat_net_type == "MOBILE_FACENET_ONNX":
@@ -191,7 +186,7 @@ class FrameFacesObj(object):
         return {s: getattr(self, s) for s in self.__slots__ if hasattr(self, s)}
 
 
-def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_in_size, model_out_size, device="cpu"):
+def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_in_size, device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -228,7 +223,7 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
     return Net(face_net, feat_net_type,
                inf_func, bbox_conf_area_func,
                det_thres, bbox_area_thres,
-               model_in_size, model_out_size)
+               model_in_size)
 
 
 def extract_face_feat_conf_area_list(net, img, save_feat):
@@ -265,8 +260,6 @@ def extract_face_feat_conf_area_list(net, img, save_feat):
         x, y, xw, yh = max(x, 0), max(y, 0), min(xw, w), min(yh, h)
         # .copy() only keeps crops in memory
         face = image[y:yh, x:xw].copy()
-        if net.FACE_MODEL_OUTPUT_SIZE is not None:
-            face = cv2.resize(face, (net.FACE_MODEL_OUTPUT_SIZE))
         if save_feat:
             feat_list.append(net.get_face_features(face.copy()))
         face_list.append(face)
@@ -438,11 +431,8 @@ def main():
                         help="Type of face feature extracter to use for tracking. (default: %(default)s)")
     parser.add_argument("-is", "--input_size",
                         nargs=2,
-                        default=(300, 400),
-                        help='Input images are resized to this (width, height) -is 300 400. (default: %(default)s).')
-    parser.add_argument("-os", "--output_size",
-                        nargs=2,
-                        help='Output face images are resized to this (width, height) -os 112 112. (default: %(default)s).')
+                        default=(400, 500),
+                        help='Input images are resized to this (width, height) -is 640 640. (default: %(default)s).')
     parser.add_argument('-noface', '--dont_save_face',
                         action="store_false",
                         help="""Flag avoids saving faces if set.""")
@@ -458,7 +448,6 @@ def main():
                    det_thres=args.det_thres,
                    bbox_area_thres=args.bbox_area_thres,
                    model_in_size=args.input_size,
-                   model_out_size=args.output_size,
                    device=args.device)
     filter_faces_from_data(args.source_datadir_path,
                            args.target_datadir_path,

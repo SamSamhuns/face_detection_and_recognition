@@ -55,14 +55,14 @@ class Net(object):
     __slots__ = ["face_net", "feature_net",
                  "inf_func", "bbox_conf_func",
                  "det_thres", "bbox_area_thres",
-                 "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE", "FACE_MODEL_OUTPUT_SIZE",
+                 "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE",
                  "feat_net_type", "face_feat_bbox_age_gender_list",
                  "normal_thres", "harsh_thres", "use_bbox_iou", "max_faceid"]
 
     def __init__(self, face_net, feat_net_type,
                  inf_func, bbox_conf_func,
                  det_thres, bbox_area_thres,
-                 model_in_size=(640, 640), model_out_size=None,
+                 model_in_size=(640, 640),
                  use_bbox_iou_to_track_face=True):
         self.face_net = face_net
         self.inf_func = inf_func
@@ -75,10 +75,6 @@ class Net(object):
         self.FACE_MODEL_INPUT_SIZE = tuple(map(check_img_size, model_in_size))
         # only for cv2 models
         self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
-        # (width, height), size the detected faces are resized
-        # if None, no resizing is done
-        self.FACE_MODEL_OUTPUT_SIZE = tuple(
-            map(int, model_out_size)) if model_out_size is not None else None
 
         # ################## parameters for face tracking #################### #
         self.face_feat_bbox_age_gender_list = []
@@ -277,8 +273,6 @@ def extract_face_img_id_bbox_conf_age_gender_list(net, img):
 
         # .copy() only keeps crops in memory
         face = image[y:yh, x:xw].copy()
-        if net.FACE_MODEL_OUTPUT_SIZE is not None:
-            face = cv2.resize(face, (net.FACE_MODEL_OUTPUT_SIZE))
         faces.append(face)
 
         # extract face features for tracking
@@ -458,10 +452,6 @@ def main():
                         nargs=2,
                         default=(300, 400),
                         help='Input images are resized to this (width, height) -is 300 400. (default: %(default)s).')
-    parser.add_argument("-os", "--output_size",
-                        nargs=2,
-                        help="""Output face images are resized to this (width, height)
-                        -os 112 112. If None, faces are not resized. (default: %(default)s).""")
     args = parser.parse_args()
     logging.info(f"Arguments used: {args}")
     print("Current Arguments: ", args)
@@ -471,7 +461,6 @@ def main():
                    det_thres=args.det_thres,
                    bbox_area_thres=args.bbox_area_thres,
                    model_in_size=args.input_size,
-                   model_out_size=args.output_size,
                    device=args.device)
 
     filter_faces_from_data(args.source_datadir_path,

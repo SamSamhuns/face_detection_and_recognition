@@ -1,5 +1,8 @@
 # Face Detection
 
+[![Python 3.8](https://img.shields.io/badge/python-3.8-green.svg)](https://www.python.org/downloads/release/python-380/)
+[![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)](https://www.python.org/downloads/release/python-390/)
+
 ## Face Detection with OpenCV Caffemodels, MTCNN, Blazeface, and YOLOv5-face
 
 <img src="readme_img/detected_faces.jpg" />
@@ -48,17 +51,17 @@ Instructions inside `face_detection_and_extraction` for face detection in images
 
 ## Similar Face Filtering for faces of the same person
 
-Instructions inside `similar_face_filtering` on filtering similar faces from  a face set using a reference face set.
+Extract faces from a face dataset that are similiar to a reference face dataset for cleaning face data. Instructions inside `similar_face_filtering`.
 
 ### Acknowledgements
 
--   (YOLOv5-face)[https://github.com/deepcam-cn/yolov5-face]
--   (Face Age Gender Training)[https://github.com/tae898/age-gender]
--   (learnopencv age and gender models)[https://github.com/spmallick/learnopencv]
--   (mtcnn)[https://github.com/ipazc/mtcnn]
--   (blazeface-python)[https://github.com/hollance/BlazeFace-PyTorch]
--   (openvino-open_model_zoo)[https://github.com/openvinotoolkit/open_model_zoo]
--   (image orientation correction with DNNs)[https://d4nst.github.io/2017/01/12/image-orientation/]
--   (mobile facenet)[https://github.com/xuexingyu24/MobileFaceNet_Tutorial_Pytorch]
--   (face recognition embedding)[https://github.com/deepinsight/insightface/tree/master/model_zoo]
--   (face anti-spoofing)[https://github.com/kprokofi/light-weight-face-anti-spoofing]
+-   [YOLOv5-face](https://github.com/deepcam-cn/yolov5-face)
+-   [Face Age Gender Training](https://github.com/tae898/age-gender)
+-   [learnopencv age and gender models](https://github.com/spmallick/learnopencv)
+-   [mtcnn](https://github.com/ipazc/mtcnn)
+-   [blazeface-python](https://github.com/hollance/BlazeFace-PyTorch)
+-   [openvino-open_model_zoo](https://github.com/openvinotoolkit/open_model_zoo)
+-   [image orientation correction with DNNs](https://d4nst.github.io/2017/01/12/image-orientation/)
+-   [mobile facenet](https://github.com/xuexingyu24/MobileFaceNet_Tutorial_Pytorch)
+-   [face recognition embedding](https://github.com/deepinsight/insightface/tree/master/model_zoo)
+-   [face anti-spoofing](https://github.com/kprokofi/light-weight-face-anti-spoofing)

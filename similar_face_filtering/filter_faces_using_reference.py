@@ -9,16 +9,24 @@ os.environ["KMP_SETTINGS"] = "1"
 os.environ["KMP_AFFINITY"] = "granularity=fine,verbose,compact,1,0"
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # specify which GPU(s) to be used
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # , 1, 2, 3, 4, 5, 6, 7
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import glob
 import shutil
 import argparse
+from typing import List, Tuple
+
+import tqdm
 import numpy as np
 import tensorflow as tf
 
+# fix seeds for reproducibility
+SEED = 42
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
 
-def _fix_path_for_globbing(dir):
+
+def _fix_path_for_globbing(dir: str) -> str:
     """ Add * at the end of paths for proper globbing
     """
     if dir[-1] == '/':         # data/
@@ -31,7 +39,7 @@ def _fix_path_for_globbing(dir):
     return dir
 
 
-def get_class_name_list(base_dir):
+def get_class_name_list(base_dir: str) -> List[str]:
     """ base_dir struct
         data
             |_class1
@@ -50,29 +58,42 @@ def get_class_name_list(base_dir):
     return map_list
 
 
-def get_ref_mean_vec_and_thres_from_imgs(model, ref_class_path, b_size=32):
+def read_and_preprocess_img(img_path: str) -> tf.Tensor:
+    img = tf.io.read_file(img_path)
+    img = tf.image.decode_jpeg(img, channels=3)
+    img = tf.image.convert_image_dtype(img, tf.float32)
+    img = tf.image.resize(img, size=(160, 160))
+    img = tf.image.per_image_standardization(img)  # standardize per channel
+    return img
+
+
+def get_ref_mean_vec_and_thres_from_imgs(model: tf.keras.Model,
+                                         ref_class_path: str,
+                                         max_ref_img_count: int = 32) -> Tuple[np.ndarray, np.ndarray]:
     """Get ref mean_vec and thres from a give ref class path
     """
     X_imgs = glob.glob(ref_class_path + "/*.jpg")
     ref_dataset = tf.data.Dataset.from_tensor_slices((X_imgs))
     ref_dataset = ref_dataset.map(
-        lambda x: (preprocess_img(x))).batch(b_size)
+        lambda x: (read_and_preprocess_img(x))).batch(1)
 
-    data_iter = iter(ref_dataset)
-    image_batch1 = next(data_iter)
-
-    # standardize per channel
-    image_batch1 = tf.image.per_image_standardization(image_batch1)
-    ref_feat = model.predict(image_batch1)  # output_batch1
+    ref_num = min(max_ref_img_count, len(ref_dataset))
+    ref_feat = []
+    for i, img_batch in enumerate(ref_dataset):
+        if i >= max_ref_img_count:
+            break
+        ref_feat.append(model.predict(img_batch, verbose=0))
+    ref_feat = np.asarray(ref_feat)
     ref_mean_vec = np.mean(ref_feat, axis=0)
 
     # calc max dist from mean vector
     max_dist_from_mean = 0
-    for i in range(b_size):
+    for i in range(ref_num):
         max_dist_from_mean = max(max_dist_from_mean,
                                  np.linalg.norm(ref_mean_vec - ref_feat[i]))
 
-    print(f"ref mean shape={ref_mean_vec.shape}",
+    print(f"number of samples considered for reference={ref_num}",
+          f"ref mean shape={ref_mean_vec.shape}",
           f"ref feat shape={ref_feat.shape}")
     print("max dist from mean in the reference batch: ", max_dist_from_mean)
 
@@ -80,75 +101,43 @@ def get_ref_mean_vec_and_thres_from_imgs(model, ref_class_path, b_size=32):
     return ref_mean_vec, thres
 
 
-def get_ref_mean_vec_and_thres(model, ref_img_dir, b_size=32):
-    # img input dim set to 160,160 for the facenet h5 model
-    ref_dataset = tf.keras.preprocessing.image_dataset_from_directory(
-        ref_img_dir,
-        labels='inferred',
-        class_names=get_class_name_list(ref_img_dir),
-        image_size=(160, 160),
-        seed=42,
-        shuffle=True,
-        batch_size=b_size)
-
-    data_iter = iter(ref_dataset)
-    image_batch1, labels_batch1 = next(data_iter)
-
-    # standardize per channel
-    image_batch1 = tf.image.per_image_standardization(image_batch1)
-    ref_feat = model.predict(
-        tf.cast(image_batch1, tf.float32))  # output_batch1
-    ref_mean_vec = np.mean(ref_feat, axis=0)
-
-    max_dist_from_mean = 0
-    for i in range(b_size):
-        max_dist_from_mean = max(max_dist_from_mean,
-                                 np.linalg.norm(ref_mean_vec - ref_feat[i]))
-
-    print(f"ref mean shape={ref_mean_vec.shape}",
-          f"ref feat shape={ref_feat.shape}")
-    print("max dist from mean in the reference batch: ", max_dist_from_mean)
-
-    thres = max_dist_from_mean  # thres for one class cls with l2 norm
-    return ref_mean_vec, thres
-
-
-def preprocess_img(img_path):
-    img = tf.io.read_file(img_path)
-    img = tf.image.decode_jpeg(img, channels=3)
-    img = tf.image.convert_image_dtype(img, tf.float32)
-    img = tf.image.resize(img, size=(160, 160))
-    return img
+def get_parsed_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ud', '--unfiltered_data_path', dest="unfiltered_data_path",
+                        type=str, required=True,
+                        help='Unfiltered raw face dataset path with class imgs in subdirs')
+    parser.add_argument('--rd', '--reference_data_path', dest="reference_data_path",
+                        type=str, required=True,
+                        help='Reference face dataset path with class imgs in each subdirs that are manually prefiltered')
+    parser.add_argument('--td', '--target_data_path', dest="target_data_path",
+                        type=str, default="data/faces_filtered",
+                        help='Dataset path where subdirs clean and unclean contain respective filtered classes')
+    parser.add_argument('-m', '--savedmodel_path',
+                        type=str, default="models/facenet/facenet_keras_p38",
+                        help='Path to savedmodel feat feature extraction model. (default: %(default)s)')
+    parser.add_argument('-b', '--batch_size',
+                        type=int, default=32,
+                        help='Dataloader batch size. (default: %(default)s)')
+    parser.add_argument('-r', '--ref_img_per_class',
+                        type=int, default=32,
+                        help='Number of reference images to consider per class: %(default)s)')
+    args = parser.parse_args()
+    return args
 
 
 def main():
-    """ unfiltered_face_data_path struct
-        filtered_face_data_path struct
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ud', '--unfiltered_face_data_path',
-                        type=str, required=True,
-                        help='Unfiltered raw face dataset path with class imgs in subdirs')
-    parser.add_argument('-rd', '--ref_face_data_path',
-                        type=str, required=True,
-                        help='Reference face dataset path with class imgs in each subdirs that are manually prefiltered')
-    parser.add_argument('-td', '--target_data_path',
-                        type=str, required=False,
-                        help='Dataset path where subdirs clean and unclean contain respective filtered classes')
-    parser.add_argument('-m', '--h5_model_path',
-                        type=str,
-                        default="models/facenet/facenet_keras.h5",
-                        help='Path to h5 feat feature extraction model. (default: %(default)s)')
-    args = parser.parse_args()
-    model = tf.keras.models.load_model(args.h5_model_path, compile=False)
+    args = get_parsed_args()
+    print(args)
+
+    model = tf.keras.models.load_model(args.savedmodel_path, compile=False)
 
     # printing input and output shape
-    print(f"Printing signature of model from {args.h5_model_path}")
+    print(f"Printing signature of model from {args.savedmodel_path}")
     print("\tInput:", model.inputs)
     print("\tOutput:", model.outputs)
 
-    UNFILTERED_ROOT = _fix_path_for_globbing(args.unfiltered_face_data_path)
-    REFERENCE_ROOT = _fix_path_for_globbing(args.reference_face_data_path)
+    UNFILTERED_ROOT = _fix_path_for_globbing(args.unfiltered_data_path)
+    REFERENCE_ROOT = _fix_path_for_globbing(args.reference_data_path)
     TARGET_ROOT = args.target_data_path
 
     ref_class_paths = glob.glob(REFERENCE_ROOT)
@@ -164,54 +153,49 @@ def main():
             raise Exception("class {} and {} did not match")
 
     # create target dirs
-    clean_path = os.path.join(TARGET_ROOT, 'clean')
-    unclean_path = os.path.join(TARGET_ROOT, 'unclean')
-    os.makedirs(clean_path, exist_ok=True)
-    os.makedirs(unclean_path, exist_ok=True)
+    clean_dir = os.path.join(TARGET_ROOT, 'clean')
+    unclean_dir = os.path.join(TARGET_ROOT, 'unclean')
+    os.makedirs(clean_dir, exist_ok=True)
+    os.makedirs(unclean_dir, exist_ok=True)
 
-    unfiltered_data_batch_size = 32
-    # iterate through reference dir classes
-    for i, ref_class_path in enumerate(ref_class_paths):
+    # iterate through each reference dir class
+    for i, ref_class_path in enumerate(tqdm.tqdm(ref_class_paths)):
         print(f"Calculating ref mean vector for {ref_class_path}")
         ref_mean_vec, thres = get_ref_mean_vec_and_thres_from_imgs(
-            model, ref_class_path)
+            model, ref_class_path, max_ref_img_count=args.ref_img_per_class)
 
         unfiltered_class_path = unfiltered_class_paths[i]
 
         X_imgs = glob.glob(unfiltered_class_path + "/*.jpg")
         unfiltered_dataset = tf.data.Dataset.from_tensor_slices((X_imgs))
         unfiltered_dataset = unfiltered_dataset.map(
-            lambda x: (preprocess_img(x))).batch(unfiltered_data_batch_size)
+            lambda x: (read_and_preprocess_img(x))).batch(args.batch_size)
 
-        counter, total, positive = 0, 0, 0
+        img_cnt = total = similar_cnt = 0
 
         filtered_class_clean_dir = os.path.join(
-            clean_path, unfiltered_class_path.split('/')[-1])
+            clean_dir, unfiltered_class_path.split('/')[-1])
         filtered_class_unclean_dir = os.path.join(
-            unclean_path, unfiltered_class_path.split('/')[-1])
+            unclean_dir, unfiltered_class_path.split('/')[-1])
+        # make class dirs
         os.makedirs(filtered_class_clean_dir, exist_ok=True)
         os.makedirs(filtered_class_unclean_dir, exist_ok=True)
 
         for img_batch in unfiltered_dataset:
-            # standardize per channel
-            img_batch_whitened = tf.image.per_image_standardization(img_batch)
-            output_batch = model.predict(img_batch_whitened)
+            output_batch = model.predict(img_batch, verbose=0)
             total += output_batch.shape[0]
             for i, out in enumerate(output_batch):
-                print(X_imgs[counter])
-                print(os.path.join(filtered_class_clean_dir, f"{counter}.jpg"))
-                print(os.path.join(
-                    filtered_class_unclean_dir, f"{counter}.jpg"))
+                class_plus_img_name = X_imgs[img_cnt].split('/')[-1]
+                # images are similar using the euclidean distance metric
                 if np.linalg.norm(out - ref_mean_vec) <= thres:
-                    positive += 1
-                    shutil.copy(X_imgs[counter], os.path.join(filtered_class_clean_dir,
-                                                              f"{counter}.jpg"))
+                    similar_cnt += 1
+                    target_path = os.path.join(filtered_class_clean_dir, class_plus_img_name)
                 else:
-                    shutil.copy(X_imgs[counter], os.path.join(filtered_class_unclean_dir,
-                                                              f"{counter}.jpg"))
-                counter += 1
+                    target_path = os.path.join(filtered_class_unclean_dir, class_plus_img_name)
+                shutil.copy(X_imgs[img_cnt], target_path)
+                img_cnt += 1
         print(
-            f"Positive percentage={positive/total:2.2f}%, positive={positive}, total={total}")
+            f"Similar images percentage={similar_cnt/total:2.2f}%, positive={similar_cnt}, total={total}")
 
 
 if __name__ == "__main__":

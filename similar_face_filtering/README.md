@@ -53,5 +53,5 @@ pip install tests/requirements-dev.txt
 Run tests from inside the `similar_face_filtering directory`
 
 ```shell
-pytest tests
+PYTHONPATH=$PYTHONPATH:./ pytest tests
 ```

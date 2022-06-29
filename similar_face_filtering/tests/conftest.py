@@ -20,9 +20,9 @@ def mock_dataset(tmp_path):
 @pytest.fixture(scope="function")
 def mock_numpy_image_path(tmp_path):
     # create images dir in tmp dir
-    dir = tmp_path / "images"
-    dir.mkdir()
-    img_np_path = dir / "numpy_random_img.jpg"
+    img_dir = tmp_path / "images"
+    img_dir.mkdir()
+    img_np_path = img_dir / "numpy_random_img.jpg"
     # create a random numpy image
     img_np = (np.random.randn(160, 160, 3) * 255).astype(np.uint8)
     img = Image.fromarray(img_np)
@@ -36,30 +36,3 @@ def mock_face_feature_ext_model():
     mpath = "models/facenet/facenet_keras_p38"
     model = tf.keras.models.load_model(mpath, compile=False)
     return model
-
-
-# @pytest.fixture(scope="session")
-# def mock_text_box(mock_text_box_stream, tmpdir_factory):
-#     file = BytesIO(mock_text_box_stream)
-#     fn = tmpdir_factory.mktemp("data").join("mock_text_box_file.png")
-#     with open(fn, 'wb') as f:
-#         f.write(file.getbuffer())
-#     return str(fn)
-
-
-# @pytest.fixture(scope="session")
-# def mock_image_stream():
-#     fpath = "tests/images/mock_image_file.jpeg"
-#     with open(fpath, 'rb') as f:
-#         file_content = f.read()
-#     return file_content
-
-
-# @pytest.fixture(scope="session")
-# def mock_image_path(mock_image_stream, tmpdir_factory):
-#     file = BytesIO(mock_image_stream)
-#     folder = tmpdir_factory.mktemp("images")
-#     fn = folder.join("mock_image_file.jpeg")
-#     with open(fn, 'wb') as f:
-#         f.write(file.getbuffer())
-#     return str(fn)

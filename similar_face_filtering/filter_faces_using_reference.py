@@ -52,17 +52,19 @@ def get_class_name_list(base_dir: str) -> List[str]:
                     |_ ...
     """
     map_list = []
-    subdir_list = glob.glob(_fix_path_for_globbing(base_dir))
+    subdir_list = sorted(glob.glob(_fix_path_for_globbing(base_dir)))
     for class_dir in subdir_list:
         map_list.append(class_dir.split('/')[-1])
     return map_list
 
 
-def read_and_preprocess_img(img_path: str) -> tf.Tensor:
+def read_and_preprocess_img(img_path: str,
+                            in_size: Tuple[int, int] = (160, 160),
+                            dct_method: str = "INTEGER_FAST") -> tf.Tensor:
     img = tf.io.read_file(img_path)
-    img = tf.image.decode_jpeg(img, channels=3)
+    img = tf.image.decode_jpeg(img, channels=3, dct_method=dct_method)
     img = tf.image.convert_image_dtype(img, tf.float32)
-    img = tf.image.resize(img, size=(160, 160))
+    img = tf.image.resize(img, size=in_size)
     img = tf.image.per_image_standardization(img)  # standardize per channel
     return img
 
@@ -189,9 +191,11 @@ def main():
                 # images are similar using the euclidean distance metric
                 if np.linalg.norm(out - ref_mean_vec) <= thres:
                     similar_cnt += 1
-                    target_path = os.path.join(filtered_class_clean_dir, class_plus_img_name)
+                    target_path = os.path.join(
+                        filtered_class_clean_dir, class_plus_img_name)
                 else:
-                    target_path = os.path.join(filtered_class_unclean_dir, class_plus_img_name)
+                    target_path = os.path.join(
+                        filtered_class_unclean_dir, class_plus_img_name)
                 shutil.copy(X_imgs[img_cnt], target_path)
                 img_cnt += 1
         print(

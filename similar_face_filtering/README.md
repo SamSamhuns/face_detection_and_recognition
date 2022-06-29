@@ -26,18 +26,32 @@ The faces must be kept inside directories with the classnames. A sample data str
 
 ```shell
 # to extract similar faces to a new FILTERED_DATA_PATH directory
-$ python filter_faces_using_reference.py
-        --ud UNFILTERED_DATA_PATH
-        --rd REFERENCE_DATA_PATH
-        --td FILTERED_DATA_PATH
-        -b BATCH_SIZE
+$ python filter_faces_using_reference.py \
+        --ud UNFILTERED_DATA_PATH \
+        --rd REFERENCE_DATA_PATH \
+        --td FILTERED_DATA_PATH \
+        -b BATCH_SIZE \
         -r REFERENCE_IMGS_PER_CLASS
 
 # i.e. to run on the images inside data dir
-$ python filter_faces_using_reference.py
-      --ud data/faces_unfiltered
-      --rd data/faces_reference
-      --td data/faces_filtered
-      -b 32
+$ python filter_faces_using_reference.py \
+      --ud data/faces_unfiltered \
+      --rd data/faces_reference \
+      --td data/faces_filtered \
+      -b 32 \
       -r 32
+```
+
+## Run Tests
+
+Install requirements
+
+```shell
+pip install tests/requirements-dev.txt
+```
+
+Run tests from inside the `similar_face_filtering directory`
+
+```shell
+pytest tests
 ```

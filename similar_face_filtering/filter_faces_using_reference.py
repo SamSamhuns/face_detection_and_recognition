@@ -27,8 +27,7 @@ tf.random.set_seed(SEED)
 
 
 def _fix_path_for_globbing(dir: str) -> str:
-    """ Add * at the end of paths for proper globbing
-    """
+    """Add * at the end of paths for proper globbing"""
     if dir[-1] == '/':         # data/
         dir += '*'
     elif dir[-1] != '*':       # data
@@ -72,12 +71,10 @@ def read_and_preprocess_img(img_path: str,
 def get_ref_mean_vec_and_thres_from_imgs(model: tf.keras.Model,
                                          ref_class_path: str,
                                          max_ref_img_count: int = 32) -> Tuple[np.ndarray, np.ndarray]:
-    """Get ref mean_vec and thres from a give ref class path
-    """
+    """Get ref mean_vec and thres from a give ref class path"""
     X_imgs = glob.glob(ref_class_path + "/*.jpg")
     ref_dataset = tf.data.Dataset.from_tensor_slices((X_imgs))
-    ref_dataset = ref_dataset.map(
-        lambda x: (read_and_preprocess_img(x))).batch(1)
+    ref_dataset = ref_dataset.map(read_and_preprocess_img).batch(1)
 
     ref_num = min(max_ref_img_count, len(ref_dataset))
     ref_feat = []

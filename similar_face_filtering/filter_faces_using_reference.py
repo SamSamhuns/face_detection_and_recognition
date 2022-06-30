@@ -39,7 +39,7 @@ def _fix_path_for_globbing(dir: str) -> str:
 
 
 def get_class_name_list(base_dir: str) -> List[str]:
-    """ base_dir struct
+    """base_dir struct
         data
             |_class1
                     |_ c1img1

@@ -93,10 +93,10 @@ def main():
     parser = get_argparse(
         description="YOLOv5-face face detection", conflict_handler='resolve')
     parser.remove_argument(["model", "prototxt"])
-    parser.add_argument("-md", "--model",
+    parser.add_argument("--md", "--model", dest="model",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')
-    parser.add_argument("-is", "--input_size",
+    parser.add_argument("--is", "--input_size", dest="input_size",
                         nargs=2,
                         default=(640, 640),
                         help='Input images are resized to this size (width, height). (default: %(default)s).')

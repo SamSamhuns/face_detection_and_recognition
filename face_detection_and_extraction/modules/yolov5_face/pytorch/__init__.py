@@ -1,9 +1,8 @@
-from utils.general import non_max_suppression_face
-from models.experimental import attempt_load
-
 import torch
 import numpy as np
 
+from utils.general import non_max_suppression_face
+from models.experimental import attempt_load
 from modules.common_utils import pad_resize_image, check_img_size
 
 

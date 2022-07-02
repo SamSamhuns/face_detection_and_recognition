@@ -2,8 +2,8 @@ import time
 import copy
 import argparse
 
-from models.experimental import attempt_load
 from utils.datasets import letterbox
+from models.experimental import attempt_load
 from utils.general import check_img_size, non_max_suppression_face, scale_coords, xyxy2xywh
 
 import cv2

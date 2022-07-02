@@ -4,6 +4,7 @@ import math
 import sys
 from copy import deepcopy
 from pathlib import Path
+from ast import literal_eval
 
 import torch
 import torch.nn as nn
@@ -11,7 +12,8 @@ import torch.nn as nn
 sys.path.append('./')  # to run '$ python *.py' files in subdirectories
 logger = logging.getLogger(__name__)
 
-from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, C3, ShuffleV2Block, Concat, NMS, autoShape, StemBlock
+from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP
+from models.common import C3, ShuffleV2Block, Concat, NMS, autoShape, StemBlock
 from models.experimental import MixConv2d, CrossConv
 from utils.autoanchor import check_anchor_order
 from utils.general import make_divisible, check_file, set_logging
@@ -266,10 +268,10 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     # from, number, module, args
     for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):
-        m = eval(m) if isinstance(m, str) else m  # eval strings
+        m = literal_eval(m) if isinstance(m, str) else m  # eval strings
         for j, a in enumerate(args):
             try:
-                args[j] = eval(a) if isinstance(a, str) else a  # eval strings
+                args[j] = literal_eval(a) if isinstance(a, str) else a  # eval strings
             except:
                 pass
 

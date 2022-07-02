@@ -16,6 +16,7 @@ import cv2
 import torch
 import numpy as np
 from tqdm import tqdm
+from ast import literal_eval
 import torch.nn.functional as F
 from PIL import Image, ExifTags
 from torch.utils.data import Dataset
@@ -209,7 +210,7 @@ class LoadWebcam:  # for inference
         self.img_size = img_size
 
         if pipe.isnumeric():
-            pipe = eval(pipe)  # local camera
+            pipe = literal_eval(pipe)  # local camera
         # pipe = 'rtsp://192.168.1.64/1'  # IP camera
         # pipe = 'rtsp://username:password@192.168.1.64/1'  # IP camera with login
         # pipe = 'http://wmccpinetop.axiscam.net/mjpg/video.mjpg'  # IP golf camera

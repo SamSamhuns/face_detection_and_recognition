@@ -55,25 +55,25 @@ def get_argparse(*args, **kwargs):
         add new arguments with parser.add_argument(...)
     """
     parser = ArgumentParserMod(*args, **kwargs)
-    parser.add_argument("-i", "--input_src", default='0',
+    parser.add_argument("-i", "--input_src", default='0', dest="input_src",
                         help=("Path to input image/video/cam_index:\n"
                               "\t IMAGE_DDOE       -i <PATH_TO_IMG>\n"
                               "\t VIDEO_MODE       -i <PATH_TO_VID>\n"
                               "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n"))
-    parser.add_argument("-md", "--model",
+    parser.add_argument("--md", "--model", dest="model",
                         default="weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
                         help='Path to model file. (default: %(default)s)')
-    parser.add_argument("-p", "--prototxt",
+    parser.add_argument("-p", "--prototxt", dest="prototxt",
                         default="weights/face_detection_caffe/deploy.prototxt.txt",
                         help="Path to 'deploy' prototxt file. (default: %(default)s)")
-    parser.add_argument("-dt", "--det_thres",
+    parser.add_argument("--dt", "--det_thres", dest="det_thres",
                         type=float, default=0.70,
                         help='score to filter weak detections. (default: %(default)s)')
-    parser.add_argument("-at", "--bbox_area_thres",
+    parser.add_argument("--at", "--bbox_area_thres", dest="bbox_area_thres",
                         type=float, default=0.12,
                         help='score to filter bboxes that cover small area perc. (default: %(default)s)')
-    parser.add_argument('-d', "--device", default="cpu",
-                        choices=["cpu", "gpu"],
+    parser.add_argument('-d', "--device", dest="device",
+                        choices=["cpu", "gpu"], default="cpu",
                         help="Device to inference on. (default: %(default)s)")
 
     return parser

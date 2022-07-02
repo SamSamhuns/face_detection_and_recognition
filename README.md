@@ -12,16 +12,17 @@
 Inside a virtual environment:
 
 ```bash
+pip install --upgrade pip
 # install requirements for all face detection models
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 # install model specific requirements
-$ pip install -r face_detection_and_extraction/requirements/trt_server.txt
-$ pip install -r face_detection_and_extraction/requirements/mobile_facenet.txt
-$ pip install -r face_detection_and_extraction/requirements/blazeface.txt
-$ pip install -r face_detection_and_extraction/requirements/mtcnn.txt
-$ pip install -r face_detection_and_extraction/requirements/opencv.txt
-$ pip install -r face_detection_and_extraction/requirements/openvino.txt
-$ pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
+pip install -r face_detection_and_extraction/requirements/trt_server.txt
+pip install -r face_detection_and_extraction/requirements/mobile_facenet.txt
+pip install -r face_detection_and_extraction/requirements/blazeface.txt
+pip install -r face_detection_and_extraction/requirements/mtcnn.txt
+pip install -r face_detection_and_extraction/requirements/opencv.txt
+pip install -r face_detection_and_extraction/requirements/openvino.txt
+pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
 ```
 
 ## Face Detection Models Implemented
@@ -52,6 +53,17 @@ Instructions inside `face_detection_and_extraction` for face detection in images
 ## Similar Face Filtering for faces of the same person
 
 Extract faces from a face dataset that are similiar to a reference face dataset for cleaning face data. Instructions inside `similar_face_filtering`.
+
+## Model weights
+
+Download `weights.zip` and unzip weights using `gdown` or directly from this [Google Drive link](https://drive.google.com/file/d/17FXIcOSaVwvpjsnfenkm1bZNmmG6VBIi/view?usp=sharing)
+
+```shell
+pip install gdown
+gdown 17FXIcOSaVwvpjsnfenkm1bZNmmG6VBIi
+unzip weights.zip
+rm weights.zip
+```
 
 ### Acknowledgements
 

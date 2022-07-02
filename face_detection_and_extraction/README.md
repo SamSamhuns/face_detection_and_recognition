@@ -1,45 +1,41 @@
 # Face Detection
 
-Face detection with different networks.
+Face detection with different models. Use `-h` flag for help.
 
 ## blazeface face detection
 
 ```shell
-$ python detect_face_blazeface.py -w               # webcam mode
-$ python detect_face_blazeface.py -i <PATH_TO_IMG> # image mode
-$ python detect_face_blazeface.py -v <PATH_TO_VID> # video mode
+python detect_face_blazeface.py                    # webcam mode default
+python detect_face_blazeface.py -i PATH_TO_IMG/VID # image or video mode
 ```
 
 ## mtcnn face detection
 
 ```shell
-$ python detect_face_opencv_mtcnn.py -w               # webcam mode
-$ python detect_face_opencv_mtcnn.py -i <PATH_TO_IMG> # image mode
-$ python detect_face_opencv_mtcnn.py -v <PATH_TO_VID> # video mode
+python detect_face_mtcnn.py                    # webcam mode default
+python detect_face_mtcnn.py -i PATH_TO_IMG/VID # image or video mode
 ```
 
 ## cv2 DNN face detection
 
 ```shell
-$ python detect_face_opencv_dnn.py -w                # webcam mode
-$ python detect_face_opencv_dnn.py -i <PATH_TO_IMG>  # image mode
-$ python detect_face_opencv_dnn.py -v <PATH_TO_VID>  # video mode
+python detect_face_opencv_dnn.py                    # webcam mode default
+python detect_face_opencv_dnn.py -i PATH_TO_IMG/VID # image or video mode
 ```
 
 ## OpenVINO face detection
 
 ```shell
-$ python detect_face_openvino.py -w                # webcam mode
-$ python detect_face_openvino.py -i <PATH_TO_IMG>  # image mode
-$ python detect_face_openvino.py -v <PATH_TO_VID>  # video mode
+python detect_face_openvino.py                    # webcam mode default
+python detect_face_openvino.py -i PATH_TO_IMG/VID # image or video mode
 ```
 
 ## YOLOv5 face detection
 
 ```shell
-$ python detect_face_yolov5_face.py -w                # webcam mode
-$ python detect_face_yolov5_face.py -i <PATH_TO_IMG>  # image mode
-$ python detect_face_yolov5_face.py -v <PATH_TO_VID>  # video mode
+python detect_face_yolov5_face.py -w                # webcam mode
+python detect_face_yolov5_face.py -i <PATH_TO_IMG>  # image mode
+python detect_face_yolov5_face.py -v <PATH_TO_VID>  # video mode
 ```
 
 ### Face Extraction Dataset Organization
@@ -65,13 +61,13 @@ example target data path = "target_data/dataset"
 ## Face Extraction from dataset
 
 ```shell
-$ python data_extraction/extract_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
+python data_extraction/extract_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
 ```
 
 ## Face Extraction and Labelling from dataset
 
 ```shell
-$ python data_extraction/extract_and_label_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
+python data_extraction/extract_and_label_faces_from_dataset.py -rd <RAW_DATA_PATH> -td <TARGET_DATA_PATH>
 ```
 
 Annotation data is also saved in the following pickle format:
@@ -114,5 +110,5 @@ Annotation data is also saved in the following pickle format:
 ## Face Extraction from imdb-wiki dataset
 
 ```shell
-$ python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
+python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
 ```

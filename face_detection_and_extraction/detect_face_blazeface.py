@@ -56,9 +56,9 @@ def inference_onnx_model(net, runtime, cv2_img, back_model=True):
 
     # Non-maximum suppression to remove overlapping detections:
     filtered_detections = []
-    for i in range(len(detections)):
+    for detection in detections:
         faces = net._weighted_non_max_suppression(
-            detections[i], use_numpy=use_numpy)
+            detection, use_numpy=use_numpy)
         if use_numpy:
             faces = np.stack(faces) if len(faces) > 0 \
                 else np.zeros((0, 17))

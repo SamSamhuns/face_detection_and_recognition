@@ -102,8 +102,7 @@ class Net(object):
             if self.feat_net_type == "MOBILE_FACENET":
                 dist = np.linalg.norm(feat - new_feat)
             else:
-                dist = 1 - (np.inner(feat, new_feat) /
-                            (np.linalg.norm(feat) * np.linalg.norm(new_feat)))
+                dist = 1 - (np.inner(feat, new_feat) / (np.linalg.norm(feat) * np.linalg.norm(new_feat)))
             if self.use_bbox_iou:
                 iou = calculate_bbox_iou(bbox, new_bbox)
             print(f"dist={dist:.3f}, bbox iou={iou:.3f}")
@@ -172,7 +171,7 @@ class FrameFacesObj(object):
         return {s: getattr(self, s) for s in self.__slots__ if hasattr(self, s)}
 
 
-def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, model_out_size, device="cpu"):
+def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -189,7 +188,7 @@ def load_net(model, feat_net_type, det_thres, bbox_area_thres, model_in_size, mo
         bbox_conf_func = get_bboxes_confs_areas_yolov5
 
     return Net(face_net, feat_net_type, inf_func, bbox_conf_func,
-               det_thres, bbox_area_thres, model_in_size, model_out_size)
+               det_thres, bbox_area_thres, model_in_size)
 
 
 def get_age_and_gender_with_cv2_waitKey(image):

@@ -92,6 +92,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
 
 
 class InfiniteDataLoader(torch.utils.data.dataloader.DataLoader):
+
     """ Dataloader that reuses workers
 
     Uses same syntax as vanilla DataLoader
@@ -112,6 +113,7 @@ class InfiniteDataLoader(torch.utils.data.dataloader.DataLoader):
 
 
 class _RepeatSampler(object):
+
     """ Sampler that repeats forever
 
     Args:

@@ -25,7 +25,7 @@ def draw_image_with_boxes(img, result_list, threshold, waitKey_val=0):
                         cv2.FONT_HERSHEY_COMPLEX, 0.65, (0, 0, 255), 2)
 
             # draw the keypoint dots
-            for key, value in result['keypoints'].items():
+            for value in result['keypoints'].values():
                 cv2.circle(img, center=value, radius=2, color=(0, 0, 255))
     cv2.imshow("output", img)
     cv2.waitKey(waitKey_val)

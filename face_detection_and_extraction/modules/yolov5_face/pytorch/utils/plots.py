@@ -261,7 +261,6 @@ def plot_labels(labels, save_dir=Path(''), loggers=None):
     print('Plotting labels... ')
     c, b = labels[:, 0], labels[:, 1:5].transpose()  # classes, boxes
     nc = int(c.max() + 1)  # number of classes
-    colors = color_list()
     x = pd.DataFrame(b.transpose(), columns=['x', 'y', 'width', 'height'])
 
     # seaborn correlogram

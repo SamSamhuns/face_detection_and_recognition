@@ -89,9 +89,9 @@ def inference_onnx(img_path, onnx_savepath="weights/blazeface/blazefaceback.onnx
 
     # Non-maximum suppression to remove overlapping detections:
     filtered_detections = []
-    for i in range(len(detections)):
+    for detection in detections:
         faces = dummy_model._weighted_non_max_suppression(
-            detections[i], use_numpy=use_numpy)
+            detection, use_numpy=use_numpy)
         if use_numpy:
             faces = np.stack(faces) if len(faces) > 0 \
                 else np.zeros((0, 17))

@@ -24,7 +24,7 @@ from torch.utils.data import Dataset
 from utils.general import xyxy2xywh, xywh2xyxy, xywhn2xyxy, clean_str
 from utils.torch_utils import torch_distributed_zero_first
 
-random = SystemRandom()
+system_random = SystemRandom()
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
@@ -524,16 +524,16 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         index = self.indices[index]  # linear, shuffled, or image_weights
 
         hyp = self.hyp
-        mosaic = self.mosaic and random.random() < hyp['mosaic']
+        mosaic = self.mosaic and system_random.random() < hyp['mosaic']
         if mosaic:
             # Load mosaic
             img, labels = load_mosaic(self, index)
             shapes = None
 
             # MixUp https://arxiv.org/pdf/1710.09412.pdf
-            if random.random() < hyp['mixup']:
+            if system_random.random() < hyp['mixup']:
                 img2, labels2 = load_mosaic(
-                    self, random.randint(0, self.n - 1))
+                    self, system_random.randint(0, self.n - 1))
                 r = np.random.beta(8.0, 8.0)  # mixup ratio, alpha=beta=8.0
                 img = (img * r + img2 * (1 - r)).astype(np.uint8)
                 labels = np.concatenate((labels, labels2), 0)
@@ -571,7 +571,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                         sgain=hyp['hsv_s'], vgain=hyp['hsv_v'])
 
             # Apply cutouts
-            # if random.random() < 0.9:
+            # if system_random.random() < 0.9:
             #     labels = cutout(img, labels)
 
         nL = len(labels)  # number of labels
@@ -582,13 +582,13 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
         if self.augment:
             # flip up-down
-            if random.random() < hyp['flipud']:
+            if system_random.random() < hyp['flipud']:
                 img = np.flipud(img)
                 if nL:
                     labels[:, 2] = 1 - labels[:, 2]
 
             # flip left-right
-            if random.random() < hyp['fliplr']:
+            if system_random.random() < hyp['fliplr']:
                 img = np.fliplr(img)
                 if nL:
                     labels[:, 1] = 1 - labels[:, 1]
@@ -621,7 +621,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         s = torch.tensor([[1, 1, .5, .5, .5, .5]])  # scale
         for i in range(n):  # zidane torch.zeros(16,3,720,1280)  # BCHW
             i *= 4
-            if random.random() < 0.5:
+            if system_random.random() < 0.5:
                 im = F.interpolate(img[i].unsqueeze(0).float(), scale_factor=2., mode='bilinear', align_corners=False)[
                     0].type(img[i].type())
                 l = label[i]
@@ -674,7 +674,7 @@ def augment_hsv(img, hgain=0.5, sgain=0.5, vgain=0.5):
     cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img)  # no return needed
 
     # Histogram equalization
-    # if random.random() < 0.2:
+    # if system_random.random() < 0.2:
     #     for i in range(3):
     #         img[:, :, i] = cv2.equalizeHist(img[:, :, i])
 
@@ -684,11 +684,11 @@ def load_mosaic(self, index):
 
     labels4 = []
     s = self.img_size
-    yc, xc = [int(random.uniform(-x, 2 * s + x))
+    yc, xc = [int(system_random.uniform(-x, 2 * s + x))
               for x in self.mosaic_border]  # mosaic center x, y
     # 3 additional image indices
     indices = [index] + \
-        [self.indices[random.randint(0, self.n - 1)] for _ in range(3)]
+        [self.indices[system_random.randint(0, self.n - 1)] for _ in range(3)]
     for i, index in enumerate(indices):
         # Load image
         img, _, (h, w) = load_image(self, index)
@@ -749,7 +749,7 @@ def load_mosaic9(self, index):
     s = self.img_size
     # 8 additional image indices
     indices = [index] + \
-        [self.indices[random.randint(0, self.n - 1)] for _ in range(8)]
+        [self.indices[system_random.randint(0, self.n - 1)] for _ in range(8)]
     for i, index in enumerate(indices):
         # Load image
         img, _, (h, w) = load_image(self, index)
@@ -793,7 +793,7 @@ def load_mosaic9(self, index):
         hp, wp = h, w  # height, width previous
 
     # Offset
-    yc, xc = [int(random.uniform(0, s))
+    yc, xc = [int(system_random.uniform(0, s))
               for x in self.mosaic_border]  # mosaic center x, y
     img9 = img9[yc:yc + 2 * s, xc:xc + 2 * s]
 
@@ -828,8 +828,8 @@ def replicate(img, labels):
     for i in s.argsort()[:round(s.size * 0.5)]:  # smallest indices
         x1b, y1b, x2b, y2b = boxes[i]
         bh, bw = y2b - y1b, x2b - x1b
-        yc, xc = int(random.uniform(0, h - bh)
-                     ), int(random.uniform(0, w - bw))  # offset x, y
+        yc, xc = int(system_random.uniform(0, h - bh)
+                     ), int(system_random.uniform(0, w - bw))  # offset x, y
         x1a, y1a, x2a, y2a = [xc, yc, xc + bw, yc + bh]
         # img4[ymin:ymax, xmin:xmax]
         img[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]
@@ -890,31 +890,27 @@ def random_perspective(img, targets=(), degrees=10, translate=.1, scale=.1, shea
     # Perspective
     P = np.eye(3)
     # x perspective (about y)
-    P[2, 0] = random.uniform(-perspective, perspective)
+    P[2, 0] = system_random.uniform(-perspective, perspective)
     # y perspective (about x)
-    P[2, 1] = random.uniform(-perspective, perspective)
+    P[2, 1] = system_random.uniform(-perspective, perspective)
 
     # Rotation and Scale
     R = np.eye(3)
-    a = random.uniform(-degrees, degrees)
-    # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
-    s = random.uniform(1 - scale, 1 + scale)
-    # s = 2 ** random.uniform(-scale, scale)
+    a = system_random.uniform(-degrees, degrees)
+    # a += system_random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
+    s = system_random.uniform(1 - scale, 1 + scale)
+    # s = 2 ** system_random.uniform(-scale, scale)
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(0, 0), scale=s)
 
     # Shear
     S = np.eye(3)
-    S[0, 1] = math.tan(random.uniform(-shear, shear) *
-                       math.pi / 180)  # x shear (deg)
-    S[1, 0] = math.tan(random.uniform(-shear, shear) *
-                       math.pi / 180)  # y shear (deg)
+    S[0, 1] = math.tan(system_random.uniform(-shear, shear) * math.pi / 180)  # x shear (deg)
+    S[1, 0] = math.tan(system_random.uniform(-shear, shear) * math.pi / 180)  # y shear (deg)
 
     # Translation
     T = np.eye(3)
-    T[0, 2] = random.uniform(0.5 - translate, 0.5 +
-                             translate) * width  # x translation (pixels)
-    T[1, 2] = random.uniform(0.5 - translate, 0.5 +
-                             translate) * height  # y translation (pixels)
+    T[0, 2] = system_random.uniform(0.5 - translate, 0.5 + translate) * width  # x translation (pixels)
+    T[1, 2] = system_random.uniform(0.5 - translate, 0.5 + translate) * height  # y translation (pixels)
 
     # Combined rotation matrix
     M = T @ S @ R @ P @ C  # order of operations (right to left) is IMPORTANT
@@ -1007,18 +1003,18 @@ def cutout(image, labels):
     scales = [0.5] * 1 + [0.25] * 2 + [0.125] * 4 + \
         [0.0625] * 8 + [0.03125] * 16  # image size fraction
     for s in scales:
-        mask_h = random.randint(1, int(h * s))
-        mask_w = random.randint(1, int(w * s))
+        mask_h = system_random.randint(1, int(h * s))
+        mask_w = system_random.randint(1, int(w * s))
 
         # box
-        xmin = max(0, random.randint(0, w) - mask_w // 2)
-        ymin = max(0, random.randint(0, h) - mask_h // 2)
+        xmin = max(0, system_random.randint(0, w) - mask_w // 2)
+        ymin = max(0, system_random.randint(0, h) - mask_h // 2)
         xmax = min(w, xmin + mask_w)
         ymax = min(h, ymin + mask_h)
 
         # apply random color mask
         image[ymin:ymax, xmin:xmax] = [
-            random.randint(64, 191) for _ in range(3)]
+            system_random.randint(64, 191) for _ in range(3)]
 
         # return unobscured labels
         if len(labels) and s > 0.03:
@@ -1049,8 +1045,7 @@ def extract_boxes(path='../coco128/'):
     # Convert detection dataset into classification dataset, with one directory per class
 
     path = Path(path)  # images dir
-    shutil.rmtree(path / 'classifier') if (path /
-                                           'classifier').is_dir() else None  # remove existing
+    shutil.rmtree(path / 'classifier') if (path / 'classifier').is_dir() else None  # remove existing
     files = list(path.rglob('*.*'))
     n = len(files)  # number of files
     for im_file in tqdm(files, total=n):
@@ -1097,7 +1092,7 @@ def autosplit(path='../coco128', weights=(0.9, 0.1, 0.0)):
     files = list(path.rglob('*.*'))
     n = len(files)  # number of files
     # assign each image to a split
-    indices = random.choices([0, 1, 2], weights=weights, k=n)
+    indices = system_random.choices([0, 1, 2], weights=weights, k=n)
     txt = ['autosplit_train.txt', 'autosplit_val.txt',
            'autosplit_test.txt']  # 3 txt files
     [(path / x).unlink()

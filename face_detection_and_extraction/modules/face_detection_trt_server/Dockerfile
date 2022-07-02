@@ -10,7 +10,7 @@ RUN apt-get update \
 WORKDIR /app
 
 # install pip requirements
-RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --upgrade pip==22.1.2
 RUN pip install opencv-python==4.5.3.56
 RUN pip install torch==1.9.1
 

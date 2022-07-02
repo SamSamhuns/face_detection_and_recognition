@@ -123,7 +123,7 @@ class Model(nn.Module):
             import yaml  # for torch hub
             self.yaml_file = Path(cfg).name
             with open(cfg) as f:
-                self.yaml = yaml.load(f, Loader=yaml.FullLoader)  # model dict
+                self.yaml = yaml.safe_load(f, Loader=yaml.FullLoader)  # model dict
 
         # Define model
         ch = self.yaml['ch'] = self.yaml.get('ch', ch)  # input channels
@@ -272,8 +272,8 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         for j, a in enumerate(args):
             try:
                 args[j] = literal_eval(a) if isinstance(a, str) else a  # eval strings
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in [Conv, Bottleneck, SPP, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP, C3, ShuffleV2Block, StemBlock]:

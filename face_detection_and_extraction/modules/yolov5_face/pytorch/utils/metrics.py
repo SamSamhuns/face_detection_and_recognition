@@ -172,7 +172,7 @@ class ConfusionMatrix:
             fig.axes[0].set_ylabel('Predicted')
             fig.savefig(Path(save_dir) / 'confusion_matrix.png', dpi=250)
         except Exception as e:
-            pass
+            print(e)
 
     def print(self):
         for i in range(self.nc + 1):

@@ -4,13 +4,13 @@ import os
 import glob
 import math
 import time
-import random
 import shutil
 import logging
 from pathlib import Path
 from threading import Thread
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
+from random import SystemRandom as random
 
 import cv2
 import torch
@@ -52,8 +52,8 @@ def exif_size(img):
             s = (s[1], s[0])
         elif rotation == 8:  # rotation 90
             s = (s[1], s[0])
-    except:
-        pass
+    except Exception as e:
+        print(e)
 
     return s
 
@@ -74,8 +74,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                                       prefix=prefix)
 
     batch_size = min(batch_size, len(dataset))
-    nw = min([os.cpu_count() // world_size, batch_size if batch_size >
-              1 else 0, workers])  # number of workers
+    nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = torch.utils.data.distributed.DistributedSampler(
         dataset) if rank != -1 else None
     loader = torch.utils.data.DataLoader if image_weights else InfiniteDataLoader
@@ -281,7 +280,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
         for i, s in enumerate(sources):
             # Start the thread to read frames from the video stream
             print(f'{i + 1}/{n}: {s}... ', end='')
-            cap = cv2.VideoCapture(eval(s) if s.isnumeric() else s)
+            cap = cv2.VideoCapture(literal_eval(s) if s.isnumeric() else s)
             assert cap.isOpened(), f'Failed to open {s}'
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))

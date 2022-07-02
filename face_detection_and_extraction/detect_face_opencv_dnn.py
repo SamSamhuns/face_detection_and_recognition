@@ -91,8 +91,7 @@ def inference_webcam(net, cam_index):
 
 
 def batch_inference_img(net, cv2_img):
-    """reference func for batched DNN inference
-    """
+    """Reference func for batched OpenCV DNN inference"""
     image = cv2_img
     blob = cv2.dnn.blobFromImages(
         image, 1.0, (300, 300), (104.0, 117.0, 123.0))
@@ -134,7 +133,7 @@ def batch_inference_img(net, cv2_img):
 
 def main():
     parser = get_argparse(description="OpenCV DNN face detection")
-    parser.add_argument("-is", "--input_size",
+    parser.add_argument("--is", "--input_size", dest="input_size",
                         default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')
     args = parser.parse_args()

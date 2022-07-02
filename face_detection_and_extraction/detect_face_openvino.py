@@ -53,10 +53,10 @@ def inference_webcam(net, cam_index):
 def main():
     parser = get_argparse(description="OpenVINO face detection")
     parser.remove_arguments(["model", "prototxt"])
-    parser.add_argument("-mb", "--model_bin_path",
+    parser.add_argument("--mb", "--model_bin_path", dest="model_bin_path",
                         default="weights/face_detection_0204/model.bin",
                         help="Path to openVINO model BIN file. (default: %(default)s)")
-    parser.add_argument("-mx", "--model_xml_path",
+    parser.add_argument("--mx", "--model_xml_path", dest="model_xml_path",
                         default="weights/face_detection_0204/model.xml",
                         help="Path to openVINO model XML file. (default: %(default)s)")
     args = parser.parse_args()

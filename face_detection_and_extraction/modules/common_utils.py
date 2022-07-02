@@ -24,8 +24,7 @@ class ArgumentParserMod(argparse.ArgumentParser):
             arg: argument name without leading dashes
         """
         for action in self._actions:
-            if (vars(action)['option_strings']
-                and vars(action)['option_strings'][0] == arg) \
+            if (vars(action)['option_strings'] and vars(action)['option_strings'][0] == arg) \
                     or vars(action)['dest'] == arg:
                 self._remove_action(action)
 
@@ -42,7 +41,7 @@ class ArgumentParserMod(argparse.ArgumentParser):
         Remove list of arguments from argparse object
         args:
         """
-        [self.remove_argument(arg) for arg in arg_list]
+        _ = [self.remove_argument(arg) for arg in arg_list]
 
 
 # #################### file path based utils ####################### #

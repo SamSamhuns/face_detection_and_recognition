@@ -3,23 +3,25 @@
 import glob
 import math
 import os
-import random
 from copy import copy
 from pathlib import Path
+from random import SystemRandom
 
 import cv2
+import yaml
+import torch
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import torch
-import yaml
-from PIL import Image, ImageDraw
+from PIL import Image
+import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt
 
-from utils.general import xywh2xyxy, xyxy2xywh
 from utils.metrics import fitness
+from utils.general import xywh2xyxy, xyxy2xywh
+
+random = SystemRandom()
 
 # Settings
 matplotlib.rc('font', **{'size': 11})

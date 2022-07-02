@@ -163,7 +163,7 @@ def inference_webcam(net, cam_index):
 def main():
     parser = get_argparse(
         description="OpenCV DNN face detection with age and gender estimation")
-    parser.add_argument("-is", "--input_size",
+    parser.add_argument("-is", "--input_size", dest="input_size",
                         default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')
     args = parser.parse_args()

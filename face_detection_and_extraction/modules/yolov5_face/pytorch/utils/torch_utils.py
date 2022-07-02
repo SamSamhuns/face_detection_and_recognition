@@ -92,7 +92,8 @@ def profile(x, ops, n=100, device=None):
         dtf, dtb, t = 0., 0., [0., 0., 0.]  # dt forward, backward
         try:
             flops = thop.profile(m, inputs=(x,), verbose=False)[0] / 1E9 * 2  # GFLOPS
-        except:
+        except Exception as e:
+            print(e)
             flops = 0
 
         for _ in range(n):
@@ -102,7 +103,8 @@ def profile(x, ops, n=100, device=None):
             try:
                 _ = y.sum().backward()
                 t[2] = time_synchronized()
-            except:  # no backward method
+            except Exception as e:  # no backward method
+                print(e)
                 t[2] = float('nan')
             dtf += (t[1] - t[0]) * 1000 / n  # ms per op forward
             dtb += (t[2] - t[1]) * 1000 / n  # ms per op backward

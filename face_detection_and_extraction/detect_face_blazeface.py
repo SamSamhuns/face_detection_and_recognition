@@ -121,8 +121,8 @@ def inference_webcam(net, runtime, back_model, cam_index, threshold):
 def main():
     parser = get_argparse(
         description="Blazeface face detection", conflict_handler='resolve')
-    parser.remove_arguments(["model", "prototxt", "bbox_area_thres"])
-    parser.add_argument("-md", "--model",
+    parser.remove_arguments(["prototxt", "bbox_area_thres"])
+    parser.add_argument("--md", "--model", dest="model",
                         default="weights/blazeface/blazefaceback.pth",
                         help=('Path to weight file (.pth/.onnx). (default: %(default)s). '
                               'anchors should be placed in the same dir as weights. '

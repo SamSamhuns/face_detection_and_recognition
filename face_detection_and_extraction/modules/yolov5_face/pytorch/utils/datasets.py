@@ -10,7 +10,7 @@ from pathlib import Path
 from threading import Thread
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
-from random import SystemRandom as random
+from random import SystemRandom
 
 import cv2
 import torch
@@ -23,6 +23,8 @@ from torch.utils.data import Dataset
 
 from utils.general import xyxy2xywh, xywh2xyxy, xywhn2xyxy, clean_str
 from utils.torch_utils import torch_distributed_zero_first
+
+random = SystemRandom()
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'

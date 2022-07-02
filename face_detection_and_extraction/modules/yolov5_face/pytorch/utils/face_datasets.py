@@ -1,23 +1,24 @@
-import glob
-import logging
-import math
 import os
-import random
+import glob
+import math
+import logging
 import shutil
+from pathlib import Path
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
-from pathlib import Path
+from random import SystemRandom
 
 import cv2
 import numpy as np
-import torch
-from PIL import Image, ExifTags
-from torch.utils.data import Dataset
 from tqdm import tqdm
+from PIL import Image, ExifTags
+import torch
+from torch.utils.data import Dataset
 
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
 
+random = SystemRandom()
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'

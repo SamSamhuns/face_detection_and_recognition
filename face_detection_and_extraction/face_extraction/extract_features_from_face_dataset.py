@@ -147,17 +147,16 @@ def extract_features_from_face_data(source_dir, target_dir, net):
 
     total_feats_ext = 0
     # for each class in raw data
-    for i in tqdm(range(len(dir_list))):
-        dir = dir_list[i]                # get path to class dir
-        if not osp.isdir(dir):       # skip if path is not a dir
+    for dir_path in tqdm(dir_list):  # iter through class dirs
+        if not osp.isdir(dir_path):  # skip if path is not a dir
             continue
-        class_name = dir.split("/")[-1]  # get class name
+        class_name = dir_path.split("/")[-1]  # get class name
         if class_name in CLASSES_TO_EXCLUDE:
             print(f"Excluding extraction from class {class_name}")
             continue
 
         print(f"Features will now be extracted from class {class_name}")
-        file_path_list = [file for file in glob.glob(osp.join(dir, "*"))
+        file_path_list = [file for file in glob.glob(osp.join(dir_path, "*"))
                           if file.split(".")[-1] in VALID_FILE_EXTS]
 
         class_feats_ext = 0

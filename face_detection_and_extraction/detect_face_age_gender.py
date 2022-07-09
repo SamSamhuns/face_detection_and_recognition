@@ -4,6 +4,7 @@ import numpy as np
 
 from modules.utils.parser import get_argparse
 from modules.utils.files import get_file_type
+from modules.models.base import PostProcessedDetection
 from modules.utils.image import draw_bbox_on_image, pad_resize_image, scale_coords
 
 
@@ -93,8 +94,9 @@ def inference_and_get_face_boxes(net, cv2_img):
     # rescale detections to orig image size taking the padding into account
     boxes = detections[:, 3:7]
     boxes = scale_coords((mh, mw), boxes, (h, w)).round()
-    confs = detections[:, 2]
-    draw_bbox_on_image(cv2_img, boxes, confs, bbox_area_perc)
+    bbox_confs = detections[:, 2]
+    post_dets = PostProcessedDetection(boxes, bbox_confs=bbox_confs, bbox_areas=bbox_area_perc)
+    draw_bbox_on_image(cv2_img, post_dets)
     return cv2_img, boxes
 
 

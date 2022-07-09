@@ -139,12 +139,15 @@ def calculate_bbox_iou(bbox1, bbox2):
     return iou
 
 
-def draw_bbox_on_image(cv2_img: np.ndarray, boxes, bbox_confs, bbox_areas, line_thickness=None, text_bg_alpha=0.5):
+def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.5):
     """
     Draw bboxes on cv2 image
         boxes must be 2D list/np array of coords xmin, ymin, xmax, ymax foreach bbox
         confs must be 2D list of confidences foreach corresponding bbox
     """
+    boxes = post_dets.boxes
+    bbox_confs = post_dets.bbox_confs
+    bbox_areas = post_dets.bbox_areas
     h, w = cv2_img.shape[:2]
     tl = line_thickness or round(0.002 * (w + h) / 2) + 1
 

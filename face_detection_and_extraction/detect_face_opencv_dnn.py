@@ -2,25 +2,13 @@ import numpy as np
 import cv2
 import os
 
-from modules.utils.parser import get_argparse
 from modules.utils.files import get_file_type
-from modules.utils.image import draw_bbox_on_image
-from modules.opencv2_dnn.utils import inference_cv2_model, get_bboxes_confs_areas
+from modules.utils.parser import get_argparse
+from modules.opencv2_dnn.model import OpenCVModel
+from modules.models.inference import inference_img, inference_vid, inference_webcam
 
 
-class Net(object):
-    __slots__ = ["face_net", "det_thres", "bbox_area_thres",
-                 "FACE_MODEL_MEAN_VALUES", "FACE_MODEL_INPUT_SIZE"]
-
-    def __init__(self, face_net, det_thres, bbox_area_thres, model_in_size):
-        self.face_net = face_net
-        self.det_thres = det_thres
-        self.bbox_area_thres = bbox_area_thres
-        self.FACE_MODEL_INPUT_SIZE = model_in_size  # (width, height)
-        self.FACE_MODEL_MEAN_VALUES = (104.0, 117.0, 123.0)
-
-
-def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size=(300, 300), device="cpu"):
+def load_model(model, prototxt, det_thres, bbox_area_thres, input_size=(300, 300), device="cpu"):
     # load face detection model
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
@@ -41,55 +29,7 @@ def load_net(model, prototxt, det_thres, bbox_area_thres, model_in_size=(300, 30
         face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         print("Using GPU device")
-    return Net(face_net, det_thres, bbox_area_thres, model_in_size)
-
-
-def inference_img(net, img, waitKey_val=0):
-    # load the input image and construct an input blob for the image
-    # by resizing to a fixed 300x300 pixels and then normalizing it
-    if isinstance(img, str):
-        if os.path.exists(img):
-            image = cv2.imread(img)
-        else:
-            raise FileNotFoundError(f"{img} does not exist")
-    elif isinstance(img, np.ndarray):
-        image = img
-    else:
-        raise Exception("image cannot be read")
-
-    h, w = image.shape[:2]
-    iw, ih = net.FACE_MODEL_INPUT_SIZE
-
-    # pass the blob through the network and
-    # obtain the detections and predictions
-    detections = inference_cv2_model(net.face_net,
-                                     image,
-                                     net.FACE_MODEL_INPUT_SIZE,
-                                     net.FACE_MODEL_MEAN_VALUES)
-    boxes, confs, areas = get_bboxes_confs_areas(
-        detections, net.det_thres, net.bbox_area_thres, (w, h), (iw, ih))
-    draw_bbox_on_image(image, boxes, confs, areas)
-
-    cv2.imshow("opencv_dnn", image)
-    cv2.waitKey(waitKey_val)
-
-
-def inference_vid(net, vid):
-    cap = cv2.VideoCapture(vid)
-    ret, frame = cap.read()
-
-    while ret:
-        # inference and display the resulting frame
-        inference_img(net, frame, waitKey_val=5)
-        if cv2.waitKey(5) & 0xFF == ord('q'):
-            break
-        ret, frame = cap.read()
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-def inference_webcam(net, cam_index):
-    inference_vid(net, cam_index)
+    return OpenCVModel(face_net, input_size, det_thres, bbox_area_thres)
 
 
 def batch_inference_img(net, cv2_img):
@@ -144,20 +84,20 @@ def main():
     args = parser.parse_args()
     print("Current Arguments: ", args)
 
-    net = load_net(args.model,
-                   args.prototxt,
-                   det_thres=args.det_thres,
-                   bbox_area_thres=args.bbox_area_thres,
-                   model_in_size=args.input_size,
-                   device=args.device)
+    net = load_model(args.model,
+                     args.prototxt,
+                     det_thres=args.det_thres,
+                     bbox_area_thres=args.bbox_area_thres,
+                     input_size=args.input_size,
+                     device=args.device)
     # choose inference mode
     input_type = get_file_type(args.input_src)
     if input_type == "camera":
-        inference_webcam(net, int(args.input_src))
+        inference_webcam(net, int(args.input_src), "opencv_dnn")
     elif input_type == "video":
-        inference_vid(net, args.input_src)
+        inference_vid(net, args.input_src, "opencv_dnn")
     elif input_type == "image":
-        inference_img(net, args.input_src)
+        inference_img(net, args.input_src, "opencv_dnn")
     else:
         print("File type or inference mode not recognized. Use --help")
 

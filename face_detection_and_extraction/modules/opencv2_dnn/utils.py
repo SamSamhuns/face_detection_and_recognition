@@ -1,9 +1,15 @@
+from typing import Tuple, Any
+
 import cv2
 import numpy as np
-from modules.common_utils import pad_resize_image, scale_coords
+from modules.utils.image import pad_resize_image, scale_coords
 
 
-def inference_cv2_model(net, cv2_img, input_size, mean_values):
+def inference_cv2_model(
+        net: Any,
+        cv2_img: np.ndarray,
+        input_size: Tuple[int, int],
+        mean_values: Tuple[float, float, float]):
     resized = pad_resize_image(cv2_img, new_size=input_size)
     # opencv expects BGR format
     blob = cv2.dnn.blobFromImage(resized, 1.0, input_size, mean_values)
@@ -12,7 +18,12 @@ def inference_cv2_model(net, cv2_img, input_size, mean_values):
     return detections[0][0]
 
 
-def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in_size):
+def get_bboxes_confs_areas(
+        detections: np.ndarray,
+        det_thres: float,
+        bbox_area_thres: float,
+        orig_size: Tuple[int, int],
+        in_size: Tuple[int, int]):
     """
     Returns a tuple of bounding boxes, bbox confidence scores and bbox area percentages
     """
@@ -32,5 +43,4 @@ def get_bboxes_confs_areas(detections, det_thres, bbox_area_thres, orig_size, in
     # rescale detections to orig image size taking the padding into account
     boxes = detections[:, 3:7]
     boxes = scale_coords((ih, iw), boxes, (h, w)).round()
-
     return boxes, bbox_confs, bbox_area_perc

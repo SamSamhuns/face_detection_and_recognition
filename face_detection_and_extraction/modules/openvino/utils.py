@@ -1,4 +1,4 @@
-from modules.common_utils import pad_resize_image
+from modules.utils.image import pad_resize_image
 from openvino.inference_engine import IECore
 
 

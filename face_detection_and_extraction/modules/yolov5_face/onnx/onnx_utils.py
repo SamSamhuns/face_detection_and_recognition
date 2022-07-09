@@ -3,7 +3,7 @@ import time
 import torch
 import torchvision
 import numpy as np
-from modules.common_utils import check_img_size, pad_resize_image, scale_coords
+from modules.utils.image import check_img_size, pad_resize_image, scale_coords
 
 
 def preprocess_image(cv2_image, input_size=(640, 640)):

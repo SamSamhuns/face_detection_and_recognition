@@ -7,7 +7,7 @@ sys.path.append(".")
 from modules.face_detection_trt_server.triton_utils import FlagConfig, get_client_and_model_metadata_config
 from modules.face_detection_trt_server.triton_utils import parse_model_grpc, get_inference_responses
 from modules.yolov5_face.onnx.onnx_utils import preprocess_image, get_bboxes_confs_areas
-from modules.common_utils import draw_bbox_on_image
+from modules.utils.image import draw_bbox_on_image
 
 
 class TritonServerInferenceSession(object):

@@ -1,119 +1,13 @@
 # common utils should not import from other custom packages
 import math
-import json
-import pickle
-import argparse
-import mimetypes
-from typing import List
-from pathlib import Path
-from collections import OrderedDict
+from typing import Tuple
 
 import cv2
 import numpy as np
 
 
-class ArgumentParserMod(argparse.ArgumentParser):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def remove_argument(self, arg: str):
-        """
-        Remove argument from argparse object
-        args:
-            arg: argument name without leading dashes
-        """
-        for action in self._actions:
-            if (vars(action)['option_strings'] and vars(action)['option_strings'][0] == arg) \
-                    or vars(action)['dest'] == arg:
-                self._remove_action(action)
-
-        for action in self._action_groups:
-            vars_action = vars(action)
-            var_group_actions = vars_action['_group_actions']
-            for x in var_group_actions:
-                if x.dest == arg:
-                    var_group_actions.remove(x)
-                    return
-
-    def remove_arguments(self, arg_list: List[str]):
-        """
-        Remove list of arguments from argparse object
-        args:
-        """
-        _ = [self.remove_argument(arg) for arg in arg_list]
-
-
-# #################### file path based utils ####################### #
-
-
-def get_argparse(*args, **kwargs):
-    """
-    get base argparse arguments
-        remove arguments with parser.remove_argparse_option(...)
-        add new arguments with parser.add_argument(...)
-    """
-    parser = ArgumentParserMod(*args, **kwargs)
-    parser.add_argument("-i", "--input_src", default='0', dest="input_src",
-                        help=("Path to input image/video/cam_index:\n"
-                              "\t IMAGE_DDOE       -i <PATH_TO_IMG>\n"
-                              "\t VIDEO_MODE       -i <PATH_TO_VID>\n"
-                              "\t CAM MODE:Default -i <CAM_INDEX>  -i 0 (for webcam)\n"))
-    parser.add_argument("--md", "--model", dest="model",
-                        default="weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
-                        help='Path to model file. (default: %(default)s)')
-    parser.add_argument("-p", "--prototxt", dest="prototxt",
-                        default="weights/face_detection_caffe/deploy.prototxt.txt",
-                        help="Path to 'deploy' prototxt file. (default: %(default)s)")
-    parser.add_argument("--dt", "--det_thres", dest="det_thres",
-                        type=float, default=0.70,
-                        help='score to filter weak detections. (default: %(default)s)')
-    parser.add_argument("--at", "--bbox_area_thres", dest="bbox_area_thres",
-                        type=float, default=0.12,
-                        help='score to filter bboxes that cover small area perc. (default: %(default)s)')
-    parser.add_argument('-d', "--device", dest="device",
-                        choices=["cpu", "gpu"], default="cpu",
-                        help="Device to inference on. (default: %(default)s)")
-
-    return parser
-
-
-def get_file_type(file_src):
-    """
-    Returns if a file is image/video/camera/None based on extension or int type
-    """
-    if file_src.isnumeric():
-        return 'camera'
-    mimetypes.init()
-    mimestart = mimetypes.guess_type(file_src)[0]
-
-    file_type = None
-    if mimestart is not None:
-        mimestart = mimestart.split('/')[0]
-        if mimestart in ['video', 'image']:
-            file_type = mimestart
-    return file_type
-
-
-def read_pickle(pickle_path: str):
-    with open(pickle_path, 'rb') as stream:
-        pkl_data = pickle.load(stream)
-    return pkl_data
-
-
-def read_json(fname):
-    fname = Path(fname)
-    with fname.open('rt') as handle:
-        return json.load(handle, object_hook=OrderedDict)
-
-
-def write_json(content, fname):
-    fname = Path(fname)
-    with fname.open('wt') as handle:
-        json.dump(content, handle, indent=4, sort_keys=False)
-
-
 # ##################### image size/coords utils ######################## #
+
 
 def make_divisible(x, divisor):
     """
@@ -122,7 +16,7 @@ def make_divisible(x, divisor):
     return math.ceil(x / divisor) * divisor
 
 
-def check_img_size(img_size, s=32):
+def check_img_size(img_size: int, s: int = 32):
     """
     Verify img_size is a multiple of stride s
     s = max stride, check with model.stride.max()
@@ -134,7 +28,10 @@ def check_img_size(img_size, s=32):
     return new_size
 
 
-def pad_resize_image(cv2_img, new_size=(640, 480), color=(125, 125, 125)) -> np.ndarray:
+def pad_resize_image(
+        cv2_img: np.ndarray,
+        new_size: Tuple[int, int] = (640, 480),
+        color: Tuple[int, int, int] = (125, 125, 125)) -> np.ndarray:
     """
     resize and pad image with color if necessary, maintaining orig scale
     args:
@@ -198,7 +95,7 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     return coords
 
 
-def standardize_image(cv2_img, new_dtype=np.float32):
+def standardize_image(cv2_img: np.ndarray, new_dtype=np.float32):
     """
     Linearly scales each image in image to have mean 0 and variance 1. or prewhiten image
     """
@@ -217,7 +114,7 @@ def standardize_image(cv2_img, new_dtype=np.float32):
     return std_img.astype(new_dtype)
 
 
-# ##################### bouding box utils ######################### #
+# ##################### bounding box utils ######################### #
 
 
 def calculate_bbox_iou(bbox1, bbox2):
@@ -237,12 +134,12 @@ def calculate_bbox_iou(bbox1, bbox2):
     if x_diff < 0 or y_diff < 0:  # bboxes do not intersect
         return iou
     intersect = x_diff * y_diff
-    iou = intersect / (((x1max - x1min) * (y1max - y1min)) +
-                       ((x2max - x2min) * (y2max - y2min)) - intersect)
+    iou = intersect / (
+        ((x1max - x1min) * (y1max - y1min)) + ((x2max - x2min) * (y2max - y2min)) - intersect)
     return iou
 
 
-def draw_bbox_on_image(cv2_img, boxes, bbox_confs, bbox_areas, line_thickness=None, text_bg_alpha=0.5):
+def draw_bbox_on_image(cv2_img: np.ndarray, boxes, bbox_confs, bbox_areas, line_thickness=None, text_bg_alpha=0.5):
     """
     Draw bboxes on cv2 image
         boxes must be 2D list/np array of coords xmin, ymin, xmax, ymax foreach bbox
@@ -288,7 +185,7 @@ def draw_bbox_on_image(cv2_img, boxes, bbox_confs, bbox_areas, line_thickness=No
                     thickness=1, lineType=cv2.LINE_AA)
 
 
-def get_distinct_rgb_color(index):
+def get_distinct_rgb_color(index: int):
     """
     Get a RGB color from a pre-defined colors list
     """

@@ -7,7 +7,7 @@ from python_on_whales import docker
 sys.path.append(".")
 from modules.facenet_trt_server.triton_utils import FlagConfig, get_client_and_model_metadata_config
 from modules.facenet_trt_server.triton_utils import parse_model_grpc, get_inference_responses
-from modules.common_utils import standardize_image
+from modules.utils.image import standardize_image
 
 
 class TritonServerInferenceSession(object):

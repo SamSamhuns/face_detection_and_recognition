@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 import os
 
-from modules.common_utils import get_argparse, get_file_type
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
 
 
 # draw an image with detected objects
@@ -70,7 +71,7 @@ def inference_webcam(net, cam_index, threshold):
 
 def main():
     parser = get_argparse(description="MTCNN face detection")
-    parser.remove_arguments(["model", "prototxt", "bbox_area_thres"])
+    parser.remove_arguments(["model", "bbox_area_thres"])
     args = parser.parse_args()
 
     # load model

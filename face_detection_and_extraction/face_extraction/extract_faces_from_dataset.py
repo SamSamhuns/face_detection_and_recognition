@@ -12,7 +12,9 @@ from tqdm import tqdm
 from datetime import datetime
 
 sys.path.append(".")
-from modules.common_utils import get_argparse, get_file_type, check_img_size, read_pickle
+from modules.utils.image import check_img_size
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type, read_pickle
 from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
 from modules.opencv2_dnn.utils import get_bboxes_confs_areas as get_bboxes_confs_areas_cv2
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5

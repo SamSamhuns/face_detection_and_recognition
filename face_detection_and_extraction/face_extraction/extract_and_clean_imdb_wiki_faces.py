@@ -15,8 +15,9 @@ from tqdm import tqdm
 from scipy.io import loadmat
 
 sys.path.append(".")
-from modules.common_utils import get_argparse, check_img_size
-from modules.common_utils import read_pickle, write_json
+from modules.utils.parser import get_argparse
+from modules.utils.image import check_img_size
+from modules.files import read_pickle, write_json
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_confs_areas
 from modules.mobile_facenet.utils import inference_onnx_model_mobile_facenet as inference_face_feats
 

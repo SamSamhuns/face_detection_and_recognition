@@ -2,7 +2,9 @@ import numpy as np
 import cv2
 import os
 
-from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
+from modules.utils.image import draw_bbox_on_image
 from modules.opencv2_dnn.utils import inference_cv2_model, get_bboxes_confs_areas
 
 
@@ -136,6 +138,9 @@ def main():
     parser.add_argument("--is", "--input_size", dest="input_size",
                         default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')
+    parser.add_argument("-p", "--prototxt", dest="prototxt",
+                        default="weights/face_detection_caffe/deploy.prototxt.txt",
+                        help="Path to 'deploy' prototxt file. (default: %(default)s)")
     args = parser.parse_args()
     print("Current Arguments: ", args)
 

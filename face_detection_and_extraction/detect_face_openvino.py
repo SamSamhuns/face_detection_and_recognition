@@ -2,7 +2,9 @@ import numpy as np
 import cv2
 import os
 
-from modules.common_utils import get_argparse, get_file_type, draw_bbox_on_image
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
+from modules.utils.image import draw_bbox_on_image
 from modules.openvino.utils import OVNetwork
 from modules.opencv2_dnn.utils import get_bboxes_confs_areas
 
@@ -52,7 +54,7 @@ def inference_webcam(net, cam_index):
 
 def main():
     parser = get_argparse(description="OpenVINO face detection")
-    parser.remove_arguments(["model", "prototxt"])
+    parser.remove_arguments(["model"])
     parser.add_argument("--mb", "--model_bin_path", dest="model_bin_path",
                         default="weights/face_detection_0204/model.bin",
                         help="Path to openVINO model BIN file. (default: %(default)s)")

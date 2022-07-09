@@ -3,8 +3,9 @@ import torch
 import cv2
 import os
 
-from modules.common_utils import pad_resize_image
-from modules.common_utils import get_argparse, get_file_type
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
+from modules.utils.image import pad_resize_image
 from modules.blazeface.onnx_export import preprocess_onnx
 from modules.blazeface.blazeface import BlazeFace, plot_detections
 
@@ -121,7 +122,7 @@ def inference_webcam(net, runtime, back_model, cam_index, threshold):
 def main():
     parser = get_argparse(
         description="Blazeface face detection", conflict_handler='resolve')
-    parser.remove_arguments(["prototxt", "bbox_area_thres"])
+    parser.remove_arguments(["bbox_area_thres"])
     parser.add_argument("--md", "--model", dest="model",
                         default="weights/blazeface/blazefaceback.pth",
                         help=('Path to weight file (.pth/.onnx). (default: %(default)s). '

@@ -4,8 +4,9 @@ import cv2
 import sys
 import os
 
-from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import check_img_size, draw_bbox_on_image
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
+from modules.utils.image import check_img_size, draw_bbox_on_image
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas
 
 
@@ -92,7 +93,7 @@ def inference_webcam(net, cam_index):
 def main():
     parser = get_argparse(
         description="YOLOv5-face face detection", conflict_handler='resolve')
-    parser.remove_argument(["model", "prototxt"])
+    parser.remove_argument(["model"])
     parser.add_argument("--md", "--model", dest="model",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to weight file (.pth/.onnx). (default: %(default)s).')

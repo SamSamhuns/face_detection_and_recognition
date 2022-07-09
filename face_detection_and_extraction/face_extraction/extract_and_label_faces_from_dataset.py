@@ -9,8 +9,9 @@ from tqdm import tqdm
 from datetime import datetime
 
 sys.path.append(".")
-from modules.common_utils import calculate_bbox_iou, get_distinct_rgb_color
-from modules.common_utils import get_argparse, get_file_type
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
+from modules.utils.image import calculate_bbox_iou, get_distinct_rgb_color
 from modules.yolov5_face.onnx.onnx_utils import check_img_size
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5

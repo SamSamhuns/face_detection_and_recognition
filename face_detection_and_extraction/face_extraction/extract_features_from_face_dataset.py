@@ -13,7 +13,7 @@ from tqdm import tqdm
 from datetime import datetime
 
 sys.path.append(".")
-from modules.common_utils import get_file_type, read_pickle
+from modules.files import get_file_type, read_pickle
 from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
 from modules.openvino.utils import OVNetwork
 

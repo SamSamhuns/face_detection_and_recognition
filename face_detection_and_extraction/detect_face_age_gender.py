@@ -2,8 +2,9 @@ import os
 import cv2
 import numpy as np
 
-from modules.common_utils import get_argparse, get_file_type
-from modules.common_utils import pad_resize_image, scale_coords, draw_bbox_on_image
+from modules.utils.parser import get_argparse
+from modules.utils.files import get_file_type
+from modules.utils.image import draw_bbox_on_image, pad_resize_image, scale_coords
 
 
 class Net(object):
@@ -163,7 +164,10 @@ def inference_webcam(net, cam_index):
 def main():
     parser = get_argparse(
         description="OpenCV DNN face detection with age and gender estimation")
-    parser.add_argument("-is", "--input_size", dest="input_size",
+    parser.add_argument("-p", "--prototxt", dest="prototxt",
+                        default="weights/face_detection_caffe/deploy.prototxt.txt",
+                        help="Path to 'deploy' prototxt file. (default: %(default)s)")
+    parser.add_argument("--is", "--input_size", dest="input_size",
                         default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')
     args = parser.parse_args()

@@ -35,3 +35,44 @@ class OpenCVModel(Model):
         # reorder dets to have [xmin, ymin, xmax, ymax, conf] format
         # from a [_, _, conf, xmin, ymin, xmax, ymax] fmt
         return detections[:, [3, 4, 5, 6, 2]]
+
+
+def batch_inference_img(opencv_model: OpenCVModel, cv2_img: np.ndarray):
+    """Reference func for batched OpenCV DNN inference"""
+    image = cv2_img
+    blob = cv2.dnn.blobFromImages(
+        image, 1.0, (300, 300), (104.0, 117.0, 123.0))
+    opencv_model.face_net.setInput(blob)
+    detections = opencv_model.face_net.forward()
+
+    count = 0
+    threshold = 0.5
+    img_idx = 0
+    (h, w) = image[0].shape[:2]
+
+    # loop over the detections
+    for i in range(0, detections.shape[2]):
+        # extract the confidence (i.e., probability)
+        # associated with the prediction
+        confidence = detections[0, 0, i, 2]
+        det_img_idx = int(detections[0, 0, i, 0])
+
+        # filter weak detections
+        if confidence > threshold:
+            count += 1
+            # compute the (x, y)-coordinates of the bounding box for the
+            # object
+            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+            (startX, startY, endX, endY) = box.astype("int")
+            # draw the bounding box of the face along with the associated
+            # probability
+            text = "{:.2f}%".format(confidence * 100)
+            y = startY - 10 if startY - 10 > 10 else startY + 10
+            cv2.rectangle(image[det_img_idx], (startX, startY),
+                          (endX, endY), (0, 0, 255), 2)
+            cv2.putText(image[det_img_idx], text, (startX, y),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.65, (0, 0, 255), 2)
+        if (i + 1) % 200 == 0:
+            cv2.imshow("output", image[img_idx])
+            cv2.waitKey(0)
+            img_idx += 1

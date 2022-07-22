@@ -87,10 +87,13 @@ def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
     else:
         gain = ratio_pad[0][0]
         pad = ratio_pad[1]
-
-    coords[:, [0, 2]] -= pad[0]  # x padding
-    coords[:, [1, 3]] -= pad[1]  # y padding
-    coords[:, :4] /= gain
+    # x_pad_idxs should be [0, 2] for xyxy
+    x_pad_idxs = [i for i in range(coords.shape[-1]) if i & 1 == 0]
+    # y_pad_idxs should be [1, 3] for xyxy
+    y_pad_idxs = [i for i in range(coords.shape[-1]) if i & 1 == 1]
+    coords[:, x_pad_idxs] -= pad[0]  # x padding
+    coords[:, y_pad_idxs] -= pad[1]  # y padding
+    coords /= gain
     clip_coords(coords, img0_shape)
     return coords
 
@@ -157,13 +160,13 @@ def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.
         else:
             label = f"{bbox_confs[i]:.2f}_{bbox_areas[i]:.2f}"
         xmin, ymin, xmax, ymax = map(int, box)
-        xmin, ymin, xmax, ymax = max(xmin, 0), max(
-            ymin, 0), min(xmax, w), min(ymax, h)
+        xmin, ymin, xmax, ymax = (
+            max(xmin, 0), max(ymin, 0), min(xmax, w), min(ymax, h))
         # draw bbox on image
         cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=max(
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
 
-        # draw rect covring text
+        # draw rect covering text
         t_size = cv2.getTextSize(
             label, 0, fontScale=tl / 3, thickness=1)[0]
         c2 = xmin + t_size[0] + 3, ymin - t_size[1] - 5

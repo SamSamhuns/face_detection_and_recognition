@@ -1,15 +1,12 @@
-try:
-    import torch.nn.functional as F
-    import torch.nn as nn
-    import torch
-except Exception as e:
-    print(e)
-    print("torch libraries not found")
-    print("Defaulting to numpy libraries if applicable")
+import torch.nn.functional as F
+import torch.nn as nn
+import torch
 
 import numpy as np
-import time
 import cv2
+import time
+
+from modules.utils.image import scale_coords
 
 
 class BlazeBlock(nn.Module):
@@ -262,7 +259,7 @@ class BlazeFace(nn.Module):
             A tensor with face detections.
         """
         if isinstance(img, np.ndarray):
-            img = torch.from_numpy(img).permute((2, 0, 1))
+            img = torch.from_numpy(img.copy()).permute((2, 0, 1))
 
         return self.predict_on_batch(img.unsqueeze(0))[0]
 
@@ -461,37 +458,6 @@ class BlazeFace(nn.Module):
         return output_detections
 
 
-def clip_coords(boxes, img_shape):
-    # Clip bounding xyxy bounding boxes to image shape (height, width)
-    if isinstance(boxes, np.ndarray):
-        boxes[:, 0].clip(0, img_shape[1], out=boxes[:, 0])  # x1
-        boxes[:, 1].clip(0, img_shape[0], out=boxes[:, 1])  # y1
-        boxes[:, 2].clip(0, img_shape[1], out=boxes[:, 2])  # x2
-        boxes[:, 3].clip(0, img_shape[0], out=boxes[:, 3])  # y2
-    else:  # torch.Tensor
-        boxes[:, 0].clamp_(0, img_shape[1])  # x1
-        boxes[:, 1].clamp_(0, img_shape[0])  # y1
-        boxes[:, 2].clamp_(0, img_shape[1])  # x2
-        boxes[:, 3].clamp_(0, img_shape[0])  # y2
-
-
-def scale_face_landmark_coords(img1_shape, coords, img0_shape, ratio_pad=None):
-    # Rescale coords (xyxy) from img1_shape to img0_shape
-    if ratio_pad is None:  # calculate from img0_shape
-        gain = min(img1_shape[0] / img0_shape[0],
-                   img1_shape[1] / img0_shape[1])
-        pad = (img1_shape[1] - img0_shape[1] * gain) / \
-            2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
-    else:
-        gain = ratio_pad[0][0]
-        pad = ratio_pad[1]
-    coords[:, [0, 2, 4, 6, 8, 10, 12, 14]] -= pad[0]  # x padding
-    coords[:, [1, 3, 5, 7, 9, 11, 13, 15]] -= pad[1]  # y padding
-    coords /= gain
-    clip_coords(coords, img0_shape)
-    return coords
-
-
 def plot_detections(cv2_img, detections, model_in_HW, threshold=0.5, with_keypoints=True):
     H, W = model_in_HW
     h, w = cv2_img.shape[:2]
@@ -505,7 +471,7 @@ def plot_detections(cv2_img, detections, model_in_HW, threshold=0.5, with_keypoi
     # rescale detections to orig image size taking the padding into account
     boxes = detections * \
         np.array([W, H, W, H, W, H, W, H, W, H, W, H, W, H, W, H])
-    boxes = scale_face_landmark_coords((H, W), boxes, (h, w)).round()
+    boxes = scale_coords((H, W), boxes, (h, w)).round()
 
     for i, box in enumerate(boxes):
         xmin, ymin, xmax, ymax = box[:4].astype('int')
@@ -572,10 +538,10 @@ def jaccard(box_a, box_b, use_numpy=False):
         area_b = np.broadcast_to(np.expand_dims(
             ((box_b[:, 2] - box_b[:, 0]) * (box_b[:, 3] - box_b[:, 1])), axis=0), inter.shape)
     else:
-        area_a = ((box_a[:, 2] - box_a[:, 0]) *
-                  (box_a[:, 3] - box_a[:, 1])).unsqueeze(1).expand_as(inter)  # [A,B]
-        area_b = ((box_b[:, 2] - box_b[:, 0]) *
-                  (box_b[:, 3] - box_b[:, 1])).unsqueeze(0).expand_as(inter)  # [A,B]
+        area_a = ((box_a[:, 2] - box_a[:, 0]) * (box_a[:, 3] - box_a[:, 1])
+                  ).unsqueeze(1).expand_as(inter)  # [A,B]
+        area_b = ((box_b[:, 2] - box_b[:, 0]) * (box_b[:, 3] - box_b[:, 1])
+                  ).unsqueeze(0).expand_as(inter)  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 

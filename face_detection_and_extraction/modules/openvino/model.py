@@ -30,7 +30,7 @@ class OVModel(Model):
         self.out_layer = next(iter(OVNet.outputs))
         self.in_shape = OVNet.input_info[self.in_layer].input_data.shape
         self.out_shape = OVNet.outputs[self.out_layer].shape
-        Model.__init__(self, self.in_shape[2:],
+        Model.__init__(self, self.in_shape[2:][::-1],
                        det_thres, bbox_area_thres)
 
         if verbose:

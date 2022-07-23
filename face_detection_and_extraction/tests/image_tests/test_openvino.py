@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from modules.common_utils import calculate_bbox_iou
-from modules.opencv2_dnn.utils import get_bboxes_confs_areas
+from modules.utils.image import calculate_bbox_iou
+from modules.models.inference import get_dets_bboxes_confs_lmarks_areas
 
 
 def test_blank_jpg(mock_openvino_model, mock_0_faces_image):
@@ -12,15 +12,15 @@ def test_blank_jpg(mock_openvino_model, mock_0_faces_image):
 
     image = cv2.imread(fpath)
     h, w = image.shape[:2]
-    ih, iw = model.in_shape[2:4]
+    iw, ih = model.input_size
 
-    detections = model.inference_img(image)[0][0]
-    boxes, confs, areas = get_bboxes_confs_areas(
-        detections, model.det_thres, model.bbox_area_thres, (w, h), (iw, ih))
+    dets = model(image)
+    post_dets = get_dets_bboxes_confs_lmarks_areas(
+        dets, (w, h), (iw, ih), model.det_thres, model.bbox_area_thres)
 
-    assert len(boxes) == 0
-    assert len(confs) == 0
-    assert len(areas) == 0
+    assert len(post_dets.boxes) == 0
+    assert len(post_dets.bbox_confs) == 0
+    assert len(post_dets.bbox_areas) == 0
 
 
 def test_3_faces_jpg(mock_openvino_model, mock_3_faces_image):
@@ -29,14 +29,14 @@ def test_3_faces_jpg(mock_openvino_model, mock_3_faces_image):
 
     image = cv2.imread(fpath)
     h, w = image.shape[:2]
-    ih, iw = model.in_shape[2:4]
+    iw, ih = model.input_size
 
-    detections = model.inference_img(image)[0][0]
-    boxes, _, areas = get_bboxes_confs_areas(
-        detections, model.det_thres, model.bbox_area_thres, (w, h), (iw, ih))
+    dets = model(image)
+    post_dets = get_dets_bboxes_confs_lmarks_areas(
+        dets, (w, h), (iw, ih), model.det_thres, model.bbox_area_thres)
 
     gt_areas = np.array([
-        3.77225852, 0.99964741, 0.82628834
+        0.0377225852, 0.0099964741, 0.0082628834
     ])
     gt_boxes = np.array([
         [513, 203, 634, 365],
@@ -45,7 +45,7 @@ def test_3_faces_jpg(mock_openvino_model, mock_3_faces_image):
     ], dtype=np.float32)
 
     # Check that IoU with GT if reasonable
-    pred_boxes = np.array(boxes, dtype=np.float32)
+    pred_boxes = np.array(post_dets.boxes, dtype=np.float32)
     assert len(gt_boxes) == len(pred_boxes)
 
     ious = [calculate_bbox_iou(a, b) for a, b in zip(gt_boxes, pred_boxes)]
@@ -55,4 +55,4 @@ def test_3_faces_jpg(mock_openvino_model, mock_3_faces_image):
     is_kept = iou_mat[gt_idxs, pred_idxs] >= 0.8
 
     assert gt_idxs[is_kept].shape[0] == gt_boxes.shape[0]
-    assert np.allclose(gt_areas, areas, atol=0.001)
+    assert np.allclose(gt_areas, post_dets.bbox_areas, atol=0.001)

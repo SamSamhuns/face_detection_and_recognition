@@ -10,7 +10,12 @@ class Model:
             input_size: Tuple[int, int],
             det_thres: float,
             bbox_area_thres: float):
-        """Model class that runs the face inference"""
+        """
+        Model class that runs the face inference
+        input_size: input shape (width, height)
+        det_thres: detection threshold
+        bbox_area_thres: detection bbox area threshold
+        """
         self.input_size = input_size
         self.det_thres = det_thres
         self.bbox_area_thres = bbox_area_thres

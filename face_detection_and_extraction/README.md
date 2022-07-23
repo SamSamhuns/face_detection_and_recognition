@@ -111,3 +111,9 @@ Annotation data is also saved in the following pickle format:
 ```shell
 python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
 ```
+
+## Running Tests
+
+```shell
+python -m pytest tests
+```

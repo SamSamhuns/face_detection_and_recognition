@@ -3,8 +3,8 @@ import os
 
 from modules.utils.files import get_file_type
 from modules.utils.parser import get_argparse
-from modules.opencv2_dnn.model import OpenCVModel
-from modules.models.inference import inference_img, inference_vid, inference_webcam
+from modules.opencv2_dnn.model import OpenCVFaceDetModel
+from modules.utils.inference import inference_img, inference_vid, inference_webcam
 
 
 def load_model(model_path: str, prototxt_path, det_thres: float, bbox_area_thres: float, input_size: str, device: str = "cpu"):
@@ -28,14 +28,14 @@ def load_model(model_path: str, prototxt_path, det_thres: float, bbox_area_thres
         face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         print("Using GPU device")
-    input_size = tuple(map(int, input_size.split(',')))  # conv "W_str, H_str" to (W_str, H_str)
-    return OpenCVModel(face_net, input_size, det_thres, bbox_area_thres)
+    input_size = tuple(map(int, input_size))
+    return OpenCVFaceDetModel(face_net, input_size, det_thres, bbox_area_thres)
 
 
 def main():
     parser = get_argparse(description="OpenCV DNN face detection")
     parser.add_argument("--is", "--input_size", dest="input_size",
-                        default="300,400",
+                        nargs=2, default=(300, 400),
                         help='Input images are resized to this (width, height). (default: %(default)s).')
     parser.add_argument("-p", "--prototxt", dest="prototxt",
                         default="weights/face_detection_caffe/deploy.prototxt.txt",

@@ -1,7 +1,7 @@
 from modules.utils.parser import get_argparse
 from modules.utils.files import get_file_type
 from modules.blazeface.model import BlazeFaceModel
-from modules.models.inference import inference_img, inference_vid, inference_webcam
+from modules.utils.inference import inference_img, inference_vid, inference_webcam
 
 
 def main():

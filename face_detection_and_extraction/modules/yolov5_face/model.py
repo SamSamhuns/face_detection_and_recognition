@@ -23,9 +23,15 @@ class YOLOV5FaceModel(Model):
     def __call__(self,
                  cv2_img: np.ndarray) -> np.ndarray:
         iw, ih = self.input_size
-        detections = self.inf_func(
-            self.net, cv2_img, self.input_size).cpu().numpy()
+        detections = self.inf_func(self.net, cv2_img, self.input_size)
 
-        detections[:, :4] = detections[:, :4] / np.array([iw, ih, iw, ih])
-        # reorder dets to have [xmin, ymin, xmax, ymax, conf, landmarks...] fmt
-        return detections[:, :5]
+        if detections is not None:
+            detections = detections.cpu().numpy()
+            # normalize coords to range [0, 1]
+            detections[:, :4] = detections[:, :4] / np.array([iw, ih, iw, ih])
+            # reorder dets to have [xmin, ymin, xmax, ymax, conf, landmarks...] fmt
+            detections = detections[:, :5]
+        else:
+            detections = np.ndarray(shape=(0, 5))
+
+        return detections

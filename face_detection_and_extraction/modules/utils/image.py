@@ -63,19 +63,20 @@ def clip_coords(boxes, img_shape):
     """
     Clip bounding xyxy bounding boxes to image shape (height, width)
     """
-    if isinstance(boxes, np.ndarray):
-        boxes[:, 0].clip(0, img_shape[1], out=boxes[:, 0])  # x1
-        boxes[:, 1].clip(0, img_shape[0], out=boxes[:, 1])  # y1
-        boxes[:, 2].clip(0, img_shape[1], out=boxes[:, 2])  # x2
-        boxes[:, 3].clip(0, img_shape[0], out=boxes[:, 3])  # y2
-    else:  # torch.Tensor
-        boxes[:, 0].clamp_(0, img_shape[1])  # x1
-        boxes[:, 1].clamp_(0, img_shape[0])  # y1
-        boxes[:, 2].clamp_(0, img_shape[1])  # x2
-        boxes[:, 3].clamp_(0, img_shape[0])  # y2
+    if boxes.any():
+        if isinstance(boxes, np.ndarray):
+            boxes[:, 0].clip(0, img_shape[1], out=boxes[:, 0])  # x1
+            boxes[:, 1].clip(0, img_shape[0], out=boxes[:, 1])  # y1
+            boxes[:, 2].clip(0, img_shape[1], out=boxes[:, 2])  # x2
+            boxes[:, 3].clip(0, img_shape[0], out=boxes[:, 3])  # y2
+        else:
+            boxes[:, 0].clamp_(0, img_shape[1])  # x1
+            boxes[:, 1].clamp_(0, img_shape[0])  # y1
+            boxes[:, 2].clamp_(0, img_shape[1])  # x2
+            boxes[:, 3].clamp_(0, img_shape[0])  # y2
 
 
-def scale_coords(img1_shape, coords, img0_shape, ratio_pad=None):
+def scale_coords(img1_shape: Tuple[int, int], coords: np.ndarray, img0_shape: Tuple[int, int], ratio_pad=None):
     """
     Rescale coords (xyxy) from img1_shape to img0_shape
     """
@@ -142,7 +143,7 @@ def calculate_bbox_iou(bbox1, bbox2):
     return iou
 
 
-def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.5):
+def draw_bbox_on_image(cv2_img: np.ndarray, post_dets, line_thickness: int = None, text_bg_alpha: float = 0.5):
     """
     Draw bboxes on cv2 image
         boxes must be 2D list/np array of coords xmin, ymin, xmax, ymax foreach bbox
@@ -169,9 +170,10 @@ def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
 
         # draw landmarks if provided
-        if bbox_lmarks:
+        if bbox_lmarks.any():
             for li in range(0, len(bbox_lmarks), 2):
-                cv2.circle(cv2_img, (bbox_lmarks[li], bbox_lmarks[li + 1]), radius=2, color=(0, 0, 255), thickness=1)
+                cx, cy = int(bbox_lmarks[0][li]), int(bbox_lmarks[0][li + 1])
+                cv2.circle(cv2_img, (cx, cy), radius=3, color=(0, 0, 255), thickness=1)
 
         # Add optional label to bbox if provided
         if bbox_labels:

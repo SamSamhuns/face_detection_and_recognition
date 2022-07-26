@@ -52,7 +52,8 @@ def get_dets_bboxes_confs_lmarks_areas(
     post_dets_args["boxes"] = boxes
 
     # add face-landmark coords if dets provides those values
-    post_dets_args["bbox_lmarks"] = dets[:, 5:]
+    bbox_lmarks = dets[:, 5:]
+    post_dets_args["bbox_lmarks"] = scale_coords((ih, iw), bbox_lmarks, (h, w)).round()
     # add optional labels
     post_dets_args["bbox_labels"] = opt_labels
 

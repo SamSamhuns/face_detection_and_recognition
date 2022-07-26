@@ -484,6 +484,8 @@ def plot_detections(cv2_img, detections, model_in_HW, threshold=0.5, with_keypoi
                 cv2.circle(cv2_img, (kp_x, kp_y), radius=1,
                            color=(255, 0, 0), thickness=1)
     # print("Found %d faces" % boxes.shape[0])
+    cv2.imshow("img", cv2_img)
+    cv2.waitKey(0)
 
 
 # IOU code from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/box_utils.py
@@ -560,14 +562,14 @@ def main():
     back_net.load_weights("weights/blazeface/blazefaceback.pth")
     back_net.load_anchors("weights/blazeface/anchorsback.npy")
 
-    orig_img = cv2.imread("modules/blazeface/test.jpeg")
+    orig_img = cv2.imread("data/TEST/test2_faces_3.jpg")
     img = cv2.resize(orig_img[..., ::-1], (256, 256))
     start_time = time.time()
 
-    back_detections = back_net.predict_on_image(img)
+    back_detections = back_net.predict_on_image(img).cpu().numpy()
     inference_time = time.time() - start_time
     print(f"Single img inf time:{inference_time:.2f}s, FPS:{1/inference_time}")
-    plot_detections(orig_img, back_detections, with_keypoints=True)
+    plot_detections(orig_img, back_detections, (256, 256), with_keypoints=True)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List, Any, Optional
 
 import os
 import cv2
@@ -13,7 +13,8 @@ def get_dets_bboxes_confs_lmarks_areas(
         orig_size: Tuple[int, int],
         in_size: Tuple[int, int],
         det_thres: float,
-        bbox_area_thres: float
+        bbox_area_thres: float,
+        opt_labels: Optional[List[Any]] = None,
 ) -> PostProcessedDetection:
     """
     Returns a PostProcessedDetections object containing bbox, bbox confidence scores, bbox areas and optionally face landmarks
@@ -23,6 +24,7 @@ def get_dets_bboxes_confs_lmarks_areas(
         bbox_area_thres: float = bounding box area threshold as compared to orig image size
         orig_size: Tuple[int, int] = original image size (width, height)
         in_size: Tuple[int, int] = model input image size (width, height)
+        opt_labels: List[Any] list of optional labels to add to bbox
     """
     post_dets_args = {}
     w, h = orig_size
@@ -51,6 +53,9 @@ def get_dets_bboxes_confs_lmarks_areas(
 
     # add face-landmark coords if dets provides those values
     post_dets_args["bbox_lmarks"] = dets[:, 5:]
+    # add optional labels
+    post_dets_args["bbox_labels"] = opt_labels
+
     return PostProcessedDetection(**post_dets_args)
 
 
@@ -69,15 +74,20 @@ def inference_img(
         image = img
     else:
         raise Exception("image cannot be read")
+    # dets will always be a 2D numpy array [[xmin, ymin, xmax, ymax, conf[, lmarks]], ..]
+    # opt_labels are optional labels for bounding boxes such as age, gender info, etc
+    opt_labels = []
+    if net.returns_opt_labels:
+        dets, opt_labels = net(image)
+    else:
+        dets = net(image)
 
     h, w = image.shape[:2]
     iw, ih = net.input_size
 
-    # dets will always be a 2D numpy array [[xmin, ymin, xmax, ymax, conf[, lmarks]], ..]
-    dets = net(image)
     # get bounding boxes, conf scores, face-landmarks if any and face areas
     post_dets = get_dets_bboxes_confs_lmarks_areas(
-        dets, (w, h), (iw, ih), net.det_thres, net.bbox_area_thres)
+        dets, (w, h), (iw, ih), net.det_thres, net.bbox_area_thres, opt_labels)
     draw_bbox_on_image(image, post_dets)
 
     cv2.imshow(wname, image)

@@ -151,6 +151,8 @@ def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.
     boxes = post_dets.boxes
     bbox_confs = post_dets.bbox_confs
     bbox_areas = post_dets.bbox_areas
+    bbox_lmarks = post_dets.bbox_lmarks
+    bbox_labels = post_dets.bbox_labels
     h, w = cv2_img.shape[:2]
     tl = line_thickness or round(0.002 * (w + h) / 2) + 1
 
@@ -165,6 +167,15 @@ def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.
         # draw bbox on image
         cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax), (0, 0, 255), thickness=max(
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
+
+        # draw landmarks if provided
+        if bbox_lmarks:
+            for li in range(0, len(bbox_lmarks), 2):
+                cv2.circle(cv2_img, (bbox_lmarks[li], bbox_lmarks[li + 1]), radius=2, color=(0, 0, 255), thickness=1)
+
+        # Add optional label to bbox if provided
+        if bbox_labels:
+            label += str(bbox_labels[i])
 
         # draw rect covering text
         t_size = cv2.getTextSize(
@@ -187,8 +198,8 @@ def draw_bbox_on_image(cv2_img, post_dets, line_thickness=None, text_bg_alpha=0.
             cv2_img[yMin:yMax, xMin:xMax, 2] = cv2_img[yMin:yMax,
                                                        xMin:xMax, 2] * alphaReserve + RChannel * (1 - alphaReserve)
         # draw label text
-        cv2.putText(cv2_img, label, (xmin + 3, ymin - 4), 0, tl / 3, [255, 255, 255],
-                    thickness=1, lineType=cv2.LINE_AA)
+        cv2.putText(cv2_img, label, (xmin + 3, ymin - 4), 0, fontScale=tl / 4,
+                    color=[255, 255, 255], thickness=1, lineType=cv2.LINE_AA)
 
 
 def get_distinct_rgb_color(index: int):

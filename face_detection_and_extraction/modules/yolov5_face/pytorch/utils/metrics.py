@@ -152,9 +152,6 @@ class ConfusionMatrix:
                 if not any(m1 == i):
                     self.matrix[self.nc, dc] += 1  # background FN
 
-    def matrix(self):
-        return self.matrix
-
     def plot(self, save_dir='', names=()):
         try:
             import seaborn as sn

@@ -344,11 +344,11 @@ if __name__ == '__main__':
     model = Model(opt.cfg).to(device)
     stride = model.stride.max()
     if stride == 32:
-        input = torch.Tensor(1, 3, 480, 640).to(device)
+        minput = torch.Tensor(1, 3, 480, 640).to(device)
     else:
-        input = torch.Tensor(1, 3, 512, 640).to(device)
+        minput = torch.Tensor(1, 3, 512, 640).to(device)
     model.train()
     print(model)
-    flops, params = profile(model, inputs=(input, ))
+    flops, params = profile(model, inputs=(minput, ))
     flops, params = clever_format([flops, params], "%.3f")
     print('Flops:', flops, ',Params:', params)

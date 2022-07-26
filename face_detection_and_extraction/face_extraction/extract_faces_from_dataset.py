@@ -253,7 +253,7 @@ def extract_face_feat_conf_area_list(net, img, save_feat):
 
     # copy faces and feats from image
     face_list, feat_list = [], []
-    for i, box in enumerate(boxes):
+    for box in boxes:
         xmin, ymin, xmax, ymax = box.astype('int')
         # x, y  = top x left, top y left
         # xw, yh =  bottom x right, bottom y right

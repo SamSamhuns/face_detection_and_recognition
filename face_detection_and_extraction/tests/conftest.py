@@ -1,8 +1,11 @@
 import pytest
 
 from modules.openvino.model import OVModel
+from modules.mtcnn.model import MTCNNModel
 from modules.blazeface.model import BlazeFaceModel
-from detect_face_opencv_dnn import load_model as load_OpenCVModel
+from detect_face_yolov5_face import load_model as load_YOLOV5FaceModel
+from detect_face_opencv_dnn import load_model as load_OpenCVFaceDetModel
+from detect_face_opencv_age_gender import load_model as load_OpenCVFaceAgeGenderModel
 
 
 def _get_img_content(fpath, mode="rb"):
@@ -29,11 +32,27 @@ def mock_openvino_model():
 
 
 @pytest.fixture(scope="session")
-def mock_opencv_dnn_model():
+def mock_opencv_dnn_face_det_model():
     model_path = "weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel"
     prototxt_path = "weights/face_detection_caffe/deploy.prototxt.txt"
-    model_in_size = "300,400"
-    model = load_OpenCVModel(model_path, prototxt_path, DET_THRES, BBOX_AREA_THRES, model_in_size)
+    model_in_size = (300, 400)
+    model = load_OpenCVFaceDetModel(
+        model_path, prototxt_path, DET_THRES, BBOX_AREA_THRES, model_in_size)
+    return model
+
+
+@pytest.fixture(scope="session")
+def mock_opencv_dnn_face_age_gender_model():
+    facedet_model = "weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel"
+    facedet_proto = "weights/face_detection_caffe/deploy.prototxt.txt"
+    age_proto = "weights/age_net_caffe/age_deploy.prototxt"
+    age_model = "weights/age_net_caffe/age_net.caffemodel"
+    gender_proto = "weights/gender_net_caffe/gender_deploy.prototxt"
+    gender_model = "weights/gender_net_caffe/gender_net.caffemodel"
+    model_in_size = (300, 400)
+    model = load_OpenCVFaceAgeGenderModel(
+        facedet_model, facedet_proto, age_proto, age_model, gender_proto, gender_model,
+        DET_THRES, BBOX_AREA_THRES, model_in_size, "cpu")
     return model
 
 
@@ -48,6 +67,26 @@ def mock_blazeface_torch_model():
 def mock_blazeface_onnx_model():
     model_path = "weights/blazeface/blazefaceback.onnx"
     model = BlazeFaceModel(model_path, DET_THRES, BBOX_AREA_THRES, "back")
+    return model
+
+
+@pytest.fixture(scope="session")
+def mock_mtcnn_model():
+    model = MTCNNModel(DET_THRES, BBOX_AREA_THRES)
+    return model
+
+
+@pytest.fixture(scope="session")
+def mock_yolov5_face_torch_model():
+    model_path = "weights/yolov5s/yolov5s-face.pt"
+    model = load_YOLOV5FaceModel(model_path, DET_THRES, BBOX_AREA_THRES, (640, 640), "cpu")
+    return model
+
+
+@pytest.fixture(scope="session")
+def mock_yolov5_face_onnx_model():
+    model_path = "weights/yolov5s/yolov5s-face.onnx"
+    model = load_YOLOV5FaceModel(model_path, DET_THRES, BBOX_AREA_THRES, (640, 640), "cpu")
     return model
 
 

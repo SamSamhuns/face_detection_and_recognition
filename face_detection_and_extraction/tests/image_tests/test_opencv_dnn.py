@@ -3,11 +3,11 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from modules.utils.image import calculate_bbox_iou
-from modules.models.inference import get_dets_bboxes_confs_lmarks_areas
+from modules.utils.inference import get_dets_bboxes_confs_lmarks_areas
 
 
-def test_blank_jpg(mock_opencv_dnn_model, mock_0_faces_image):
-    model = mock_opencv_dnn_model
+def test_blank_jpg(mock_opencv_dnn_face_det_model, mock_0_faces_image):
+    model = mock_opencv_dnn_face_det_model
     fpath, _ = mock_0_faces_image
 
     image = cv2.imread(fpath)
@@ -23,8 +23,8 @@ def test_blank_jpg(mock_opencv_dnn_model, mock_0_faces_image):
     assert len(post_dets.bbox_areas) == 0
 
 
-def test_3_faces_jpg(mock_opencv_dnn_model, mock_3_faces_image):
-    model = mock_opencv_dnn_model
+def test_3_faces_jpg(mock_opencv_dnn_face_det_model, mock_3_faces_image):
+    model = mock_opencv_dnn_face_det_model
     fpath, _ = mock_3_faces_image
 
     image = cv2.imread(fpath)

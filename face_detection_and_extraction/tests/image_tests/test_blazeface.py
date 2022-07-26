@@ -3,7 +3,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from modules.utils.image import calculate_bbox_iou
-from modules.models.inference import get_dets_bboxes_confs_lmarks_areas
+from modules.utils.inference import get_dets_bboxes_confs_lmarks_areas
 
 
 def test_torch_blank_jpg(mock_blazeface_torch_model, mock_0_faces_image):

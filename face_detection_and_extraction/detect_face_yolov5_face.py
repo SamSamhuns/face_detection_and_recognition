@@ -10,7 +10,7 @@ from modules.utils.inference import inference_img, inference_vid, inference_webc
 
 def load_model(model_path, det_thres, bbox_area_thres, model_in_size, device):
     # load face detection model
-    fpath, fext = os.path.splitext(model_path)
+    _, fext = os.path.splitext(model_path)
     if fext in {".pt", ".pth"}:
         sys.path.append("modules/yolov5_face/pytorch")
         from modules.yolov5_face.pytorch import attempt_load, inference_pytorch_model_yolov5_face as inf_func

@@ -344,9 +344,9 @@ class BlazeFace(nn.Module):
 
         thresh = self.score_clipping_thresh
         if use_numpy:
-            raw_score_tensor = np.clip(raw_score_tensor, -thresh, thresh)
+            raw_score_tensor = np.clip(raw_score_tensor, -thresh, thresh).astype(np.float64)
             detection_scores = np.squeeze(
-                (lambda x: 1 / (1 + np.exp(-x)))(raw_score_tensor), axis=-1)
+                (lambda x: 1 / (1 + np.exp(-x)))(raw_score_tensor), axis=-1).astype(float)
         else:
             raw_score_tensor = raw_score_tensor.clamp(-thresh, thresh)
             detection_scores = raw_score_tensor.sigmoid().squeeze(dim=-1)

@@ -7,8 +7,7 @@ from modules.utils.image import pad_resize_image
 
 class OVModel(Model):
 
-    __slots__ = ["OVExec", "in_layer", "out_layer",
-                 "det_thres", "bbox_area_thres", "in_shape", "out_shape"]
+    __slots__ = ["OVExec", "in_layer", "out_layer", "in_shape", "out_shape"]
 
     def __init__(
             self,
@@ -43,7 +42,7 @@ class OVModel(Model):
 
     def __call__(
             self,
-            cv2_img: np.ndarray):
+            cv2_img: np.ndarray) -> np.ndarray:
         # preprocess
         N, C, H, W = self.in_shape
         resized = pad_resize_image(cv2_img, (W, H))  # padded resize

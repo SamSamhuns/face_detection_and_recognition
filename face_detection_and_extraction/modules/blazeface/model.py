@@ -4,8 +4,8 @@ import torch
 import numpy as np
 
 from modules.models.base import Model
-from modules.blazeface.blazeface import BlazeFace
 from modules.utils.image import pad_resize_image
+from modules.blazeface.blazeface import BlazeFace
 from modules.blazeface.onnx_export import preprocess_onnx
 
 
@@ -40,8 +40,7 @@ def load_net(model_path: str, model_type: str, device: str):
 
 class BlazeFaceModel(Model):
 
-    __slots__ = ["net", "runtime", "input_size",
-                 "det_thres", "bbox_area_thres", "model_type"]
+    __slots__ = ["net", "runtime", "model_type"]
 
     def __init__(
             self,
@@ -57,7 +56,8 @@ class BlazeFaceModel(Model):
         self.net, self.runtime = load_net(model_path, model_type, device)
         self.model_type = model_type
 
-    def __call__(self, cv2_img: np.ndarray):
+    def __call__(self,
+                 cv2_img: np.ndarray) -> np.ndarray:
         # preprocess
         resized = pad_resize_image(cv2_img, (self.input_size))  # padded resize
 
@@ -71,13 +71,15 @@ class BlazeFaceModel(Model):
                                     4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]
         return detections
 
-    def inference_pytorch(self, cv2_img: np.ndarray):
+    def inference_pytorch(self,
+                          cv2_img: np.ndarray) -> np.ndarray:
         img = cv2_img[..., ::-1]  # BGR to RGB
         detections = self.net.predict_on_image(img)
         detections = detections.cpu().numpy() if detections.cuda else detections
         return detections
 
-    def inference_onnx(self, cv2_img: np.ndarray):
+    def inference_onnx(self,
+                       cv2_img: np.ndarray) -> np.ndarray:
         img = preprocess_onnx(
             cv2_img, back_model=True if self.model_type == "back" else False)
         outputs = self.runtime.run(None, {"images": img})

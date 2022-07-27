@@ -58,7 +58,6 @@ class BlazeFaceModel(Model):
 
     def __call__(self,
                  cv2_img: np.ndarray) -> np.ndarray:
-        iw, ih = self.input_size
         # preprocess
         resized = pad_resize_image(cv2_img, (self.input_size))  # padded resize
 
@@ -66,11 +65,9 @@ class BlazeFaceModel(Model):
             detections = self.inference_pytorch(resized)
         else:                     # onnx inference
             detections = self.inference_onnx(resized)
-        # reorder dets to have [xmin, ymin, xmax, ymax, conf, landmarks...] fmt
-        # from a [ymin, xmin, ymax, xmax, landmarks..., conf] fmt
-        detections = detections[:, [1, 0, 3, 2, 16,
-                                    4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]
-        detections[:, 5:] = detections[:, 5:] * np.array([iw, ih, iw, ih, iw, ih, iw, ih, iw, ih, iw, ih])
+        # reorder dets to have [xmin, ymin, xmax, ymax, landmarks..., conf] fmt
+        #               from a [ymin, xmin, ymax, xmax, landmarks..., conf] fmt
+        detections = detections[:, [1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]]
         return detections
 
     def inference_pytorch(self,

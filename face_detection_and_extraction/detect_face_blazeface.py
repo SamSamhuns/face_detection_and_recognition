@@ -17,6 +17,8 @@ def main():
                         help=("Model type back or front. The --md model weight file must also match. (default: %(default)s). "
                               "anchors should be placed in the same dir as weights."))
     args = parser.parse_args()
+    print("Current Arguments: ", args)
+
     net = BlazeFaceModel(
         args.model, args.det_thres, args.bbox_area_thres, args.model_type, args.device)
 

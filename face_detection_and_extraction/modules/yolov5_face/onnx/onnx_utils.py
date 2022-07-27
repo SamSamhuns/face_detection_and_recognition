@@ -41,8 +41,8 @@ def conv_strides_to_anchors(pred, device="cpu"):
     no = 16
     nl = 3
     grid = [torch.zeros(1).to(device)] * nl
-    anchor_grid = torch.tensor([[[[[[4.,   5.]]], [[[8.,  10.]]], [[[13.,  16.]]]]],
-                                [[[[[23.,  29.]]], [[[43.,  55.]]], [[[73., 105.]]]]],
+    anchor_grid = torch.tensor([[[[[[4., 5.]]], [[[8., 10.]]], [[[13., 16.]]]]],
+                                [[[[[23., 29.]]], [[[43., 55.]]], [[[73., 105.]]]]],
                                 [[[[[146., 217.]]], [[[231., 300.]]], [[[335., 433.]]]]]]).to(device)
 
     z = []
@@ -53,9 +53,10 @@ def conv_strides_to_anchors(pred, device="cpu"):
         y = torch.full_like(x[i], 0)
         y[..., [0, 1, 2, 3, 4, 15]] = x[i][..., [0, 1, 2, 3, 4, 15]].sigmoid()
         y[..., 5:15] = x[i][..., 5:15]
-        y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 +
-                       grid[i].to(x[i].device)) * stride[i]  # xy
-        y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * anchor_grid[i]  # wh
+        y[..., 0:2] = (
+            y[..., 0:2] * 2. - 0.5 + grid[i].to(x[i].device)) * stride[i]  # xy
+        y[..., 2:4] = (
+            y[..., 2:4] * 2) ** 2 * anchor_grid[i]  # wh
 
         y[..., 5:7] = y[..., 5:7] * anchor_grid[i] + \
             grid[i].to(x[i].device) * stride[i]  # landmark x1 y1

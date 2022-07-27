@@ -8,6 +8,7 @@ def main():
     parser = get_argparse(description="MTCNN face detection")
     parser.remove_arguments(["model", "device"])
     args = parser.parse_args()
+    print("Current Arguments: ", args)
 
     # load model
     net = MTCNNModel(args.det_thres, args.bbox_area_thres)

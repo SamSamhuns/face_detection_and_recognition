@@ -12,7 +12,7 @@ def load_model(model_path: str, prototxt_path, det_thres: float, bbox_area_thres
     if device not in {"cpu", "gpu"}:
         raise NotImplementedError(f"Device {device} is not supported")
 
-    fname, fext = os.path.splitext(model_path)
+    _, fext = os.path.splitext(model_path)
     if fext == ".caffemodel":
         face_net = cv2.dnn.readNetFromCaffe(prototxt_path, model_path)
     elif fext == ".pb":

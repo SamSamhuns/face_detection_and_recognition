@@ -27,5 +27,5 @@ docker run --rm \
       --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 \
       --gpus device="0" \
       --name facenet_feat_ext \
-      -p $grpc:8081 \
+      -p "$grpc":8081 \
       facenet_feat_extraction:latest

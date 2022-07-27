@@ -19,9 +19,9 @@ def get_dets_bboxes_confs_lmarks_areas(
     """
     Returns a PostProcessedDetections object containing bbox, bbox confidence scores, bbox areas and optionally face landmarks
     Arguments:
-        dets: np.ndarray[np.ndarray[xmin, ymin, xmax, ymax, conf[, lmarks...]], ...] = bounding boxes must be normalized
+        dets: np.ndarray[np.ndarray[xmin, ymin, xmax, ymax, [,lmarks...], conf], ...] = bboxes normalized to [0, 1] wrt in_size
         det_thres: float = detection threshold
-        bbox_area_thres: float = bounding box area threshold as compared to orig image size
+        bbox_area_thres: float = bbox area threshold as compared to orig image size
         orig_size: Tuple[int, int] = original image size (width, height)
         in_size: Tuple[int, int] = model input image size (width, height)
         opt_labels: List[Any] list of optional labels to add to bbox
@@ -31,30 +31,28 @@ def get_dets_bboxes_confs_lmarks_areas(
     iw, ih = in_size
 
     # filter dets below threshold
-    dets = dets[dets[:, 4] > det_thres]
-    # denorm bounding boxes to model input_size
-    dets[:, :4] = dets[:, :4] * np.array([iw, ih, iw, ih])
+    dets = dets[dets[:, -1] > det_thres]
+    # denorm bounding boxes and optional landmark coords to model input_size
+    dets[:, :-1] = dets[:, :-1] * np.array([iw, ih] * ((dets.shape[-1] - 1) // 2))
     # only select bboxes with area greater than bbox_area_thres of total area of frame
     total_area = iw * ih
     bbox_area = ((dets[:, 2] - dets[:, 0]) * (dets[:, 3] - dets[:, 1]))
     bbox_area_perc = bbox_area / total_area
-    bbox_area_perc_filter = 100 * bbox_area_perc > bbox_area_thres
+    bbox_area_perc_filter = (100 * bbox_area_perc) > bbox_area_thres
     dets = dets[bbox_area_perc_filter]
     # select bbox_area_percs higher than bbox_area_thres
     bbox_area_perc = bbox_area_perc[bbox_area_perc_filter]
     post_dets_args["bbox_areas"] = bbox_area_perc
 
-    bbox_confs = dets[:, 4]
-    post_dets_args["bbox_confs"] = bbox_confs
+    post_dets_args["bbox_confs"] = dets[:, -1]
+    dets = dets[:, :-1]  # discard bbox conf scores
     # rescale dets to orig image size taking the padding into account
-    boxes = dets[:, :4]
-    boxes = scale_coords((ih, iw), boxes, (h, w)).round()
-    post_dets_args["boxes"] = boxes
-
+    dets = scale_coords((ih, iw), dets, (h, w)).round()
+    # add bbox coords
+    post_dets_args["boxes"] = dets[:, :4]
     # add face-landmark coords if dets provides those values
-    bbox_lmarks = dets[:, 5:]
-    post_dets_args["bbox_lmarks"] = scale_coords((ih, iw), bbox_lmarks, (h, w)).round()
-    # add optional labels
+    post_dets_args["bbox_lmarks"] = dets[:, 4:]
+    # add optional bbox labels
     post_dets_args["bbox_labels"] = opt_labels
 
     return PostProcessedDetection(**post_dets_args)

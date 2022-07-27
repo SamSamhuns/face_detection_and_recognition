@@ -458,36 +458,6 @@ class BlazeFace(nn.Module):
         return output_detections
 
 
-def plot_detections(cv2_img, detections, model_in_HW, threshold=0.5, with_keypoints=True):
-    H, W = model_in_HW
-    h, w = cv2_img.shape[:2]
-    if detections.ndim == 1:
-        detections = np.expand_dims(detections, axis=0)
-    # filter weak detections
-    detections = detections[detections[:, -1] > threshold]
-    # change (ymin, xmin, ymax, xmax) tp (xmin, ymin, xmax, ymax) format
-    detections = detections[:, np.array(
-        [1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])]
-    # rescale detections to orig image size taking the padding into account
-    boxes = detections * \
-        np.array([W, H, W, H, W, H, W, H, W, H, W, H, W, H, W, H])
-    boxes = scale_coords((H, W), boxes, (h, w)).round()
-
-    for i, box in enumerate(boxes):
-        xmin, ymin, xmax, ymax = box[:4].astype('int')
-        cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax),
-                      color=(0, 0, 255), thickness=1)
-        if with_keypoints:
-            for k in range(6):
-                kp_x = int(boxes[i, 4 + k * 2])
-                kp_y = int(boxes[i, 4 + k * 2 + 1])
-                cv2.circle(cv2_img, (kp_x, kp_y), radius=1,
-                           color=(255, 0, 0), thickness=1)
-    # print("Found %d faces" % boxes.shape[0])
-    cv2.imshow("img", cv2_img)
-    cv2.waitKey(0)
-
-
 # IOU code from https://github.com/amdegroot/ssd.pytorch/blob/master/layers/box_utils.py
 
 def intersect(box_a, box_b, use_numpy=False):
@@ -554,6 +524,36 @@ def overlap_similarity(box, other_boxes, use_numpy=False):
         return jaccard(np.expand_dims(box, axis=0), other_boxes, use_numpy).squeeze(0)
     else:
         return jaccard(box.unsqueeze(0), other_boxes, use_numpy).squeeze(0)
+
+
+def plot_detections(cv2_img, detections, model_in_HW, threshold=0.5, with_keypoints=True):
+    H, W = model_in_HW
+    h, w = cv2_img.shape[:2]
+    if detections.ndim == 1:
+        detections = np.expand_dims(detections, axis=0)
+    # filter weak detections
+    detections = detections[detections[:, -1] > threshold]
+    # change (ymin, xmin, ymax, xmax) tp (xmin, ymin, xmax, ymax) format
+    detections = detections[:, np.array(
+        [1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])]
+    # rescale detections to orig image size taking the padding into account
+    boxes = detections * \
+        np.array([W, H, W, H, W, H, W, H, W, H, W, H, W, H, W, H])
+    boxes = scale_coords((H, W), boxes, (h, w)).round()
+
+    for i, box in enumerate(boxes):
+        xmin, ymin, xmax, ymax = box[:4].astype('int')
+        cv2.rectangle(cv2_img, (xmin, ymin), (xmax, ymax),
+                      color=(0, 0, 255), thickness=1)
+        if with_keypoints:
+            for k in range(6):
+                kp_x = int(boxes[i, 4 + k * 2])
+                kp_y = int(boxes[i, 4 + k * 2 + 1])
+                cv2.circle(cv2_img, (kp_x, kp_y), radius=1,
+                           color=(255, 0, 0), thickness=1)
+    # print("Found %d faces" % boxes.shape[0])
+    cv2.imshow("img", cv2_img)
+    cv2.waitKey(0)
 
 
 def main():

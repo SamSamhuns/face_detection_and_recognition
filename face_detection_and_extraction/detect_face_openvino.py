@@ -14,6 +14,7 @@ def main():
                         default="weights/face_detection_0204/model.xml",
                         help="Path to openVINO model XML file. (default: %(default)s)")
     args = parser.parse_args()
+    print("Current Arguments: ", args)
 
     net = OVModel(args.model_xml_path, args.model_bin_path,
                   args.det_thres, args.bbox_area_thres, device=args.device.upper())

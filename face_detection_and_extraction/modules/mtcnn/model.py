@@ -24,13 +24,14 @@ class MTCNNModel(Model):
         iw, ih = self.input_size
 
         detections = []
-        # reorder dets to have [xmin, ymin, xmax, ymax, conf, lmarks] format
+        # reorder dets to have [xmin, ymin, xmax, ymax, lmarks, conf] format
         for det in model_out:
             x, y, width, height = det['box']
             xmin, ymin, xmax, ymax = x, y, x + width, y + height
             xmin, ymin, xmax, ymax = xmin / iw, ymin / ih, xmax / iw, ymax / ih
             conf = det['confidence']
             lmarks = np.asarray([kp for kp in det['keypoints'].values()]).flatten()
-            detections.append([xmin, ymin, xmax, ymax, conf, *lmarks])
+            lmarks = np.asarray([(kp0 / iw, kp1 / ih) for kp0, kp1 in det['keypoints'].values()]).flatten()
+            detections.append([xmin, ymin, xmax, ymax, *lmarks, conf])
         detections = np.empty(shape=(0, 15)) if not detections else detections
         return np.asarray(detections)

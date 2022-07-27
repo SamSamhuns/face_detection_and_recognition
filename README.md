@@ -2,6 +2,7 @@
 
 [![Python 3.8](https://img.shields.io/badge/python-3.8-green.svg)](https://www.python.org/downloads/release/python-380/)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)](https://www.python.org/downloads/release/python-390/)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/07b06636035d460c8e6e53a6eb88eea4)](https://www.codacy.com/gh/SamSamhuns/face_detection_and_recognition/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=SamSamhuns/face_detection_and_recognition&amp;utm_campaign=Badge_Grade)
 
 ## Face Detection with OpenCV Caffemodels, MTCNN, Blazeface, and YOLOv5-face
 

@@ -46,7 +46,7 @@ def scale_coords_landmarks(img1_shape, coords, img0_shape, ratio_pad=None):
 
 
 def show_results(img, xywh, conf, landmarks, class_num):
-    h, w, c = img.shape
+    h, w, _ = img.shape  # H,W,C
     tl = 1 or round(0.002 * (h + w) / 2) + 1  # line/font thickness
     x1 = int(xywh[0] * w - 0.5 * xywh[2] * w)
     y1 = int(xywh[1] * h - 0.5 * xywh[3] * h)
@@ -115,7 +115,7 @@ def detect_one(model, image_path, device):
     print('orgimg.shape: ', orgimg.shape)
 
     # Process detections
-    for i, det in enumerate(pred):  # detections per image
+    for det in pred:  # detections per image
         gn = torch.tensor(orgimg.shape)[[1, 0, 1, 0]].to(
             device)  # normalization gain whwh
         gn_lks = torch.tensor(orgimg.shape)[[1, 0, 1, 0, 1, 0, 1, 0, 1, 0]].to(
@@ -132,8 +132,8 @@ def detect_one(model, image_path, device):
                 xywh = (xyxy2xywh(det[j, :4].view(
                     1, 4)) / gn).view(-1).tolist()
                 conf = det[j, 4].cpu().numpy()
-                landmarks = (det[j, 5:15].view(1, 10) /
-                             gn_lks).view(-1).tolist()
+                landmarks = (
+                    det[j, 5:15].view(1, 10) / gn_lks).view(-1).tolist()
                 class_num = det[j, 15].cpu().numpy()
                 orgimg = show_results(orgimg, xywh, conf, landmarks, class_num)
 

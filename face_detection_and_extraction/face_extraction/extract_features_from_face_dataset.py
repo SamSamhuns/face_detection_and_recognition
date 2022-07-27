@@ -15,7 +15,7 @@ from datetime import datetime
 sys.path.append(".")
 from modules.files import get_file_type, read_pickle
 from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
-from modules.openvino.utils import OVNetwork
+from modules.openvino.model import OVModel
 
 
 mimetypes.init()
@@ -68,12 +68,12 @@ class Net(object):
             self.feature_net = onnxruntime.InferenceSession(
                 "weights/MOBILE_FACENET/MOBILE_FACENET.onnx")
         elif feat_net_type == "FACE_REID_MNV2":
-            self.feature_net = OVNetwork(
+            self.feature_net = OVModel(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)
         elif feat_net_type == "FACENET_OV":
-            self.feature_net = OVNetwork(
+            self.feature_net = OVModel(
                 xml_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.xml",
                 bin_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)

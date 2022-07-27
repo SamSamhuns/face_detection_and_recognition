@@ -12,18 +12,17 @@ from tqdm import tqdm
 from datetime import datetime
 
 sys.path.append(".")
-from modules.utils.image import check_img_size
 from modules.utils.parser import get_argparse
 from modules.utils.files import get_file_type, read_pickle
-from modules.opencv2_dnn.utils import inference_cv2_model as inf_cv2
-from modules.opencv2_dnn.utils import get_bboxes_confs_areas as get_bboxes_confs_areas_cv2
+from modules.utils.image import check_img_size, scale_coords
+from modules.opencv2_dnn.model import load_model as load_OpenCV2Model
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
 from modules.face_detection_trt_server.inference import TritonServerInferenceSession as face_det_trt_sess
 from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
 from modules.facenet_age_trt_server.inference import TritonServerInferenceSession as face_age_trt_sess
 from modules.facenet_gender_trt_server.inference import TritonServerInferenceSession as face_gender_trt_sess
-from modules.openvino.utils import OVNetwork
+from modules.openvino.model import OVModel
 
 
 today = datetime.today()
@@ -92,13 +91,13 @@ class Net(object):
                 "weights/mobile_facenet/mobile_facenet.onnx")
             self.FACE_FEATURE_SIZE = 512
         elif feat_net_type == "FACE_REID_MNV2":
-            self.feature_net = OVNetwork(
+            self.feature_net = OVModel(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)
             self.FACE_FEATURE_SIZE = 256
         elif feat_net_type == "FACENET_OV":
-            self.feature_net = OVNetwork(
+            self.feature_net = OVModel(
                 xml_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.xml",
                 bin_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.bin",
                 det_thres=None, bbox_area_thres=None, verbose=False)
@@ -220,8 +219,38 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
             face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
             face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
             print("Using GPU device")
-        inf_func = inf_cv2
-        bbox_conf_area_func = get_bboxes_confs_areas_cv2
+        opencv2_model = load_OpenCV2Model(
+            model, prototxt, det_thres, bbox_area_thres, model_in_size, device)
+
+        def inf_func(net, image, **kwargs):
+            return opencv2_model(image)
+
+        def bbox_conf_area_func(dets, det_thres, bbox_area_thres, orig_size, in_size):
+            w, h = orig_size
+            iw, ih = in_size
+
+            # filter dets below threshold
+            dets = dets[dets[:, -1] > det_thres]
+            # denorm bounding boxes and optional landmark coords to model input_size
+            dets[:, :-1] = dets[:, :-1] * np.array([iw, ih] * ((dets.shape[-1] - 1) // 2))
+            # only select bboxes with area greater than bbox_area_thres of total area of frame
+            total_area = iw * ih
+            bbox_area = ((dets[:, 2] - dets[:, 0]) * (dets[:, 3] - dets[:, 1]))
+            bbox_area_perc = bbox_area / total_area
+            bbox_area_perc_filter = (100 * bbox_area_perc) > bbox_area_thres
+            dets = dets[bbox_area_perc_filter]
+            # select bbox_area_percs higher than bbox_area_thres
+            bbox_area_perc = bbox_area_perc[bbox_area_perc_filter]
+            areas = bbox_area_perc
+
+            confs = dets[:, -1]
+            dets = dets[:, :-1]  # discard bbox conf scores
+            # rescale dets to orig image size taking the padding into account
+            dets = scale_coords((ih, iw), dets, (h, w)).round()
+            # add bbox coords
+            boxes = dets[:, :4]
+            return boxes, confs, areas
+
     return Net(face_net, feat_net_type,
                inf_func, bbox_conf_area_func,
                det_thres, bbox_area_thres,

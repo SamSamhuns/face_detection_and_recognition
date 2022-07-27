@@ -8,6 +8,7 @@ from modules.face_detection_trt_server.triton_utils import FlagConfig, get_clien
 from modules.face_detection_trt_server.triton_utils import parse_model_grpc, get_inference_responses
 from modules.yolov5_face.onnx.onnx_utils import preprocess_image, get_bboxes_confs_areas
 from modules.utils.image import draw_bbox_on_image
+from modules.models.base import PostProcessedDetection
 
 
 class TritonServerInferenceSession(object):
@@ -111,7 +112,9 @@ if __name__ == "__main__":
     oh, ow = cv2_image.shape[:2]
     boxes, bbox_confs, bbox_area_percs = get_bboxes_confs_areas(
         out, 0.7, 0.10, (ow, oh), (640, 640))
-    draw_bbox_on_image(cv2_image, boxes, bbox_confs, bbox_area_percs)
+
+    dets = PostProcessedDetection(boxes, bbox_confs, bbox_area_percs)
+    draw_bbox_on_image(cv2_image, dets)
 
     print("boxes", boxes)
     print("bbox_confs", bbox_confs)

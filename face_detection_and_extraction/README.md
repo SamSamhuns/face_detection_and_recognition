@@ -109,6 +109,15 @@ python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/
 
 ## Running Tests
 
+Install requirements
+
 ```shell
-python -m pytest tests
+pip install requirements/dev.txt
+```
+
+Run tests from inside the `face_detection_and_extraction directory`
+
+```shell
+python -m pytest tests                 # run pytest
+python -m pytest --cov=modules tests/  # run pytest with coverage
 ```

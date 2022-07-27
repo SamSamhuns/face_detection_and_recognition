@@ -53,5 +53,6 @@ pip install tests/requirements-dev.txt
 Run tests from inside the `similar_face_filtering directory`
 
 ```shell
-PYTHONPATH=$PYTHONPATH:./ pytest tests
+python -m pytest tests                 # run pytest
+python -m pytest --cov=modules tests/  # run pytest with coverage
 ```

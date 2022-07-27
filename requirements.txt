@@ -6,4 +6,5 @@
 -r face_detection_and_extraction/requirements/openvino.txt
 -r face_detection_and_extraction/requirements/trt_server.txt
 -r face_detection_and_extraction/requirements/yolov5-face.txt
+-r face_detection_and_extraction/requirements/dev.txt
 -r similar_face_filtering/requirements.txt

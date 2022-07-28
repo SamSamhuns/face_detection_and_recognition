@@ -66,12 +66,26 @@ unzip weights.zip
 rm weights.zip
 ```
 
+Or, download weights individually from the GitHub.
+
+```shell
+mkdir -p similar_face_filtering/models/facenet/
+wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/facenet_keras_p38.zip -O similar_face_filtering/models/facenet/facenet_keras_p38.zip
+unzip similar_face_filtering/models/facenet/facenet_keras_p38.zip -d similar_face_filtering/models/facenet/
+rm similar_face_filtering/models/facenet/facenet_keras_p38.zip
+
+wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/weights.zip -O face_detection_and_extraction/weights.zip
+unzip face_detection_and_extraction/weights.zip -d face_detection_and_extraction/
+rm face_detection_and_extraction/weights.zip
+```
+
 ### Acknowledgements
 
 -   [YOLOv5-face](https://github.com/deepcam-cn/yolov5-face)
 -   [Face Age Gender Training](https://github.com/tae898/age-gender)
 -   [learnopencv age and gender models](https://github.com/spmallick/learnopencv)
 -   [mtcnn](https://github.com/ipazc/mtcnn)
+-   [tf-mtcnn](https://github.com/blaueck/tf-mtcnn)
 -   [blazeface-python](https://github.com/hollance/BlazeFace-PyTorch)
 -   [openvino-open_model_zoo](https://github.com/openvinotoolkit/open_model_zoo)
 -   [image orientation correction with DNNs](https://d4nst.github.io/2017/01/12/image-orientation/)

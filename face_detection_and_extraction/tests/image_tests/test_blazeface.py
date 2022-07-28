@@ -21,6 +21,7 @@ def test_torch_blank_jpg(mock_blazeface_torch_model, mock_0_faces_image):
     assert len(post_dets.boxes) == 0
     assert len(post_dets.bbox_confs) == 0
     assert len(post_dets.bbox_areas) == 0
+    assert len(post_dets.bbox_lmarks) == 0
 
 
 def test_onnx_blank_jpg(mock_blazeface_onnx_model, mock_0_faces_image):
@@ -38,6 +39,7 @@ def test_onnx_blank_jpg(mock_blazeface_onnx_model, mock_0_faces_image):
     assert len(post_dets.boxes) == 0
     assert len(post_dets.bbox_confs) == 0
     assert len(post_dets.bbox_areas) == 0
+    assert len(post_dets.bbox_lmarks) == 0
 
 
 def test_torch_3_faces_jpg(mock_blazeface_torch_model, mock_3_faces_image):
@@ -60,6 +62,11 @@ def test_torch_3_faces_jpg(mock_blazeface_torch_model, mock_3_faces_image):
         [285., 248., 343., 305.],
         [510., 232., 640., 362.]
     ], dtype=np.float32)
+    gt_lmarks = np.array([
+        [420., 247., 447., 244., 430., 263., 434., 275., 415., 254., 474., 247.],
+        [300., 263., 326., 264., 312., 276., 312., 288., 287., 268., 341., 270.],
+        [544., 263., 595., 264., 563., 293., 564., 322., 522., 280., 635., 284.]
+    ], dtype=np.float32)
 
     # Check that IoU with GT if reasonable
     pred_boxes = np.array(post_dets.boxes, dtype=np.float32)
@@ -73,6 +80,7 @@ def test_torch_3_faces_jpg(mock_blazeface_torch_model, mock_3_faces_image):
 
     assert gt_idxs[is_kept].shape[0] == gt_boxes.shape[0]
     assert np.allclose(gt_areas, post_dets.bbox_areas, atol=0.001)
+    assert np.allclose(gt_lmarks, post_dets.bbox_lmarks, atol=1)
 
 
 def test_onnx_3_faces_jpg(mock_blazeface_onnx_model, mock_3_faces_image):
@@ -95,6 +103,11 @@ def test_onnx_3_faces_jpg(mock_blazeface_onnx_model, mock_3_faces_image):
         [285., 248., 343., 305.],
         [510., 232., 640., 362.]
     ], dtype=np.float32)
+    gt_lmarks = np.array([
+        [420., 247., 447., 244., 430., 263., 434., 275., 415., 254., 474., 247.],
+        [300., 263., 326., 264., 312., 276., 312., 288., 287., 268., 341., 270.],
+        [544., 263., 595., 264., 563., 293., 564., 322., 522., 280., 635., 284.]
+    ], dtype=np.float32)
 
     # Check that IoU with GT if reasonable
     pred_boxes = np.array(post_dets.boxes, dtype=np.float32)
@@ -108,3 +121,4 @@ def test_onnx_3_faces_jpg(mock_blazeface_onnx_model, mock_3_faces_image):
 
     assert gt_idxs[is_kept].shape[0] == gt_boxes.shape[0]
     assert np.allclose(gt_areas, post_dets.bbox_areas, atol=0.001)
+    assert np.allclose(gt_lmarks, post_dets.bbox_lmarks, atol=1)

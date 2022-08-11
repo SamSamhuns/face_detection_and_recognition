@@ -170,7 +170,7 @@ def draw_bbox_on_image(cv2_img: np.ndarray, post_dets, line_thickness: int = Non
             int((w + h) / 600), 1), lineType=cv2.LINE_AA)
 
         # draw landmarks if provided
-        if bbox_lmarks.any():
+        if bbox_lmarks is not None and bbox_lmarks.any():
             for li in range(0, len(bbox_lmarks[i]), 2):
                 cx, cy = int(bbox_lmarks[i][li]), int(bbox_lmarks[i][li + 1])
                 cv2.circle(cv2_img, (cx, cy), radius=3, color=(0, 0, 255), thickness=1)

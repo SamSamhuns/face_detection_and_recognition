@@ -4,7 +4,12 @@ from modules.mtcnn.model import MTCNNSlowModel, MTCNNFastModel
 from modules.utils.inference import inference_img, inference_vid, inference_webcam
 
 
-def load_model(model_type, det_thres, bbox_area_thres, device):
+def load_model(
+    model_type: str,
+    det_thres: float,
+    bbox_area_thres: float,
+    device: str
+):
     if model_type == "fast":
         device = "cpu:0" if "cpu" in device.lower() else device
         net = MTCNNFastModel(
@@ -28,7 +33,8 @@ def main():
     print("Current Arguments: ", args)
 
     # load model
-    net = load_model(args.model_type, args.det_thres, args.bbox_area_thres, args.device)
+    net = load_model(args.model_type, args.det_thres,
+                     args.bbox_area_thres, args.device)
 
     # choose inference mode
     input_type = get_file_type(args.input_src)

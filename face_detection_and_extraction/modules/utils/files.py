@@ -6,7 +6,7 @@ from typing import Union, Dict
 from collections import OrderedDict
 
 
-def get_file_type(file_src: Union[int, str]):
+def get_file_type(file_src: Union[int, str]) -> str:
     """
     Returns if a file is image/video/camera/None based on extension or int type
     """
@@ -29,13 +29,13 @@ def read_pickle(pickle_path: str):
     return pkl_data
 
 
-def read_json(fname: str):
+def read_json(fname: str) -> dict:
     fname = Path(fname)
     with fname.open('rt') as handle:
         return json.load(handle, object_hook=OrderedDict)
 
 
-def write_json(content: Dict, fname: str):
+def write_json(content: Dict, fname: str) -> None:
     fname = Path(fname)
     with fname.open('wt') as handle:
         json.dump(content, handle, indent=4, sort_keys=False)

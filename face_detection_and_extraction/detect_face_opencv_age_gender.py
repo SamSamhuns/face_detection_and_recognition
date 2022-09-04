@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import cv2
 
 from modules.utils.parser import get_argparse
@@ -7,16 +9,17 @@ from modules.utils.inference import inference_img, inference_vid, inference_webc
 
 
 def load_model(
-        facedet_model="weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
-        facedet_proto="weights/face_detection_caffe/deploy.prototxt.txt",
-        age_proto="weights/age_net_caffe/age_deploy.prototxt",
-        age_model="weights/age_net_caffe/age_net.caffemodel",
-        gender_proto="weights/gender_net_caffe/gender_deploy.prototxt",
-        gender_model="weights/gender_net_caffe/gender_net.caffemodel",
-        det_thres=0.75,
-        bbox_area_thres=0.10,
-        model_in_size=(300, 400),
-        device="cpu"):
+        facedet_model: str = "weights/face_detection_caffe/res10_300x300_ssd_iter_140000.caffemodel",
+        facedet_proto: str = "weights/face_detection_caffe/deploy.prototxt.txt",
+        age_proto: str = "weights/age_net_caffe/age_deploy.prototxt",
+        age_model: str = "weights/age_net_caffe/age_net.caffemodel",
+        gender_proto: str = "weights/gender_net_caffe/gender_deploy.prototxt",
+        gender_model: str = "weights/gender_net_caffe/gender_net.caffemodel",
+        det_thres: float = 0.75,
+        bbox_area_thres: float = 0.10,
+        model_in_size: Tuple[int, int] = (300, 400),
+        device="cpu"
+):
     """
     Load face detection, age, and gender estimation models
     """
@@ -56,6 +59,7 @@ def main():
                         help='Input images are resized to this (width, height). (default: %(default)s).')
     args = parser.parse_args()
     print("Current Arguments: ", args)
+    args.input_size = tuple(map(int, args.input_size))
 
     # Load networks
     net = load_model(facedet_model=args.model,

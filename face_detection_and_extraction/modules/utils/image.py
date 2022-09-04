@@ -59,7 +59,7 @@ def pad_resize_image(
     return pad_resized_img
 
 
-def clip_coords(boxes, img_shape):
+def clip_coords(boxes, img_shape: Tuple[int, int]):
     """
     Clip bounding xyxy bounding boxes to image shape (height, width)
     """

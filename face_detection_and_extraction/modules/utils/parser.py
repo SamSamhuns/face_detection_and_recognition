@@ -56,7 +56,7 @@ def get_argparse(*args, **kwargs):
                         type=float, default=0.12,
                         help='bbox_area * 100/image_area perc thres to filter small bboxes. (default: %(default)s)')
     parser.add_argument('-d', "--device", dest="device",
-                        choices=["cpu", "cuda:0"], default="cpu",
+                        choices=["cpu", "cuda", "cuda:0", "cuda:1", "cuda:2", "cuda:3"], default="cpu",
                         help="Device to inference on. (default: %(default)s)")
 
     return parser

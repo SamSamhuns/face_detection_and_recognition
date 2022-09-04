@@ -8,7 +8,7 @@ from detect_face_opencv_dnn import load_model as load_OpenCVFaceDetModel
 from detect_face_opencv_age_gender import load_model as load_OpenCVFaceAgeGenderModel
 
 
-def _get_img_content(fpath, mode="rb"):
+def _get_img_content(fpath: str, mode: str = "rb"):
     with open(fpath, mode) as f:
         img_content = f.read()
     return img_content

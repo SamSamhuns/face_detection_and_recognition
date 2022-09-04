@@ -1,6 +1,8 @@
-import torch
-import sys
 import os
+import sys
+from typing import Tuple
+
+import torch
 
 from modules.utils.parser import get_argparse
 from modules.utils.files import get_file_type
@@ -8,7 +10,13 @@ from modules.yolov5_face.model import YOLOV5FaceModel
 from modules.utils.inference import inference_img, inference_vid, inference_webcam
 
 
-def load_model(model_path, det_thres, bbox_area_thres, model_in_size, device):
+def load_model(
+    model_path: str,
+    det_thres: float,
+    bbox_area_thres: float,
+    model_in_size: Tuple[int, int],
+    device: str
+):
     # load face detection model
     _, fext = os.path.splitext(model_path)
     if fext in {".pt", ".pth"}:
@@ -27,7 +35,6 @@ def load_model(model_path, det_thres, bbox_area_thres, model_in_size, device):
         raise NotImplementedError(
             f"[ERROR] model with extension {fext} not implemented")
 
-    model_in_size = tuple(map(int, model_in_size))
     return YOLOV5FaceModel(net, det_thres, bbox_area_thres, inf_func, model_in_size)
 
 
@@ -43,6 +50,7 @@ def main():
                         help='Input images are resized to this size (width, height). (default: %(default)s).')
     args = parser.parse_args()
     print("Current Arguments: ", args)
+    args.input_size = tuple(map(int, args.input_size))
 
     net = load_model(args.model, args.det_thres, args.bbox_area_thres,
                      args.input_size, args.device)

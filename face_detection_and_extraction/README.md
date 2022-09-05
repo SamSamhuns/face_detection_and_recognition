@@ -37,6 +37,36 @@ python detect_face_yolov5_face.py                     # webcam mode
 python detect_face_yolov5_face.py -i PATH_TO_IMG/VID  # image or video mode
 ```
 
+## Face Detection model evaluation
+
+### Evaluation on WIDERFACE dataset
+
+#### Install pycocotools
+
+`pycocotools` is required for evaluation script.
+
+Inside a virtual env.
+
+```shell
+pip install Cython
+# make and install pycocotools
+git clone https://github.com/cocodataset/cocoapi
+cd coco/PythonAPI
+make
+pip install .
+```
+
+#### Download WIDER_val split and run evaluation
+
+Download `wider_face_split` and `WIDER_val` from <http://shuoyang1213.me/WIDERFACE/> and place them inside `eval` directory.
+
+```shell
+# by default run wider_face_val_split with opencv face detection
+PYTHONPATH=$PYTHONPATH:./ python eval/eval_face_detector.py eval/wider_face_split/wider_face_val_bbx_gt.txt eval/WIDER_val/images/
+# run wider_face_val_split with yolov5s face detection
+PYTHONPATH=$PYTHONPATH:./ python eval2/eval_face_detector.py eval1/wider_face_split/wider_face_val_bbx_gt.txt eval1/WIDER_val/images/ --model_type yolov5_face --model weights/yolov5s/yolov5s-face.pt
+```
+
 ### Face Extraction Dataset Organization
 
     # Raw Data Organization

@@ -82,29 +82,27 @@ python face_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/
 ## Face Extraction from dataset
 
 ```shell
-python face_extraction/extract_faces_from_dataset.py --rd RAW_DATA_PATH --td TARGET_DATA_PATH
+python face_extraction/extract_faces_from_dataset.py --rd SRC_DATA_DIR --td TARGET_DATA_DIR
+python face_extraction/extract_faces_from_dataset.py --rd data --td extracted_faces  # using existing imgs in data
 ```
 
 **Raw Data Organization:**
 
-       dataset
-             |_ class_1
-                       |_ img1/vid1
-                       |_ img2/vid2
-                       |_ ....
-             |_ class_2
-                       |_ img1/vid1
-                       |_ img2/vid2
-                       |_ ....
-             ...
-
-example raw data path    = "raw_data/dataset"
-example target data path = "target_data/dataset"
+    SRC_DATA_DIR
+                |_ class_1
+                         |_ img1/vid1
+                         |_ img2/vid2
+                         |_ ....
+                |_ class_2
+                         |_ img1/vid1
+                         |_ img2/vid2
+                         |_ ....
+                ...
 
 ## Face Extraction and Labelling from dataset
 
 ```shell
-python face_extraction/extract_and_label_faces_from_dataset.py --rd RAW_DATA_PATH --td TARGET_DATA_PATH
+python face_extraction/extract_and_label_faces_from_dataset.py --rd SRC_DATA_DIR --td TARGET_DATA_PATH
 ```
 
 **Annotation data is also saved in the following pickle format:**

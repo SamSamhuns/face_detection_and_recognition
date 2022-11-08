@@ -3,6 +3,7 @@ import cv2
 import sys
 import glob
 import time
+import torch
 import logging
 import mimetypes
 import traceback
@@ -197,6 +198,11 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
         face_net = cv2.dnn.readNetFromTensorflow(model, prototxt)
     elif fext == ".onnx":
         face_net = onnxruntime.InferenceSession(model)  # ignores prototxt
+    elif fext in {".pt", ".pth"}:
+        sys.path.append("modules/yolov5_face/pytorch")
+        from modules.yolov5_face.pytorch import attempt_load
+        device = torch.device("cuda" if device == "gpu" and torch.cuda.is_available() else "cpu")
+        face_net = attempt_load(model, device)
     elif fname == "modules/face_detection_trt_server":
         face_net = face_det_trt_sess(det_thres, bbox_area_thres, device=device)
     else:
@@ -205,6 +211,12 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
 
     if fext == ".onnx":
         inf_func = inf_yolov5
+        bbox_conf_area_func = get_bboxes_confs_areas_yolov5
+    elif fext in {".pt", ".pth"}:
+        from modules.yolov5_face.pytorch import inference_pytorch_model_yolov5_face as inf_yolov5_pt
+
+        def inf_func(net, image, *args, **kwargs):
+            return inf_yolov5_pt(net, image, *args)
         bbox_conf_area_func = get_bboxes_confs_areas_yolov5
     elif fname == "modules/face_detection_trt_server":
         inf_func = face_net.inference_trt_model_yolov5_face

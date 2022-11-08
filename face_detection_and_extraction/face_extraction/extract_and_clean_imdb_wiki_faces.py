@@ -17,7 +17,7 @@ from scipy.io import loadmat
 sys.path.append(".")
 from modules.utils.parser import get_argparse
 from modules.utils.image import check_img_size
-from modules.files import read_pickle, write_json
+from modules.utils.files import read_pickle, write_json
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face, get_bboxes_confs_areas
 from modules.mobile_facenet.utils import inference_onnx_model_mobile_facenet as inference_face_feats
 
@@ -260,22 +260,20 @@ def main():
     parser = get_argparse(
         description="IMDB-WIKI dataset face and face-feature extraction and cleaning", conflict_handler='resolve')
     parser.remove_arguments(["model", "prototxt", "input_src", "device"])
-    parser.add_argument("-d", "--dataset_path",
+    parser.add_argument("-d", "--dataset_path", dest="dataset_path",
                         default="data/wiki", choices=["data/imdb", "data/wiki"],
                         help="Dataset type. (default: %(default)s)")
-    parser.add_argument("-md", "--model_det",
+    parser.add_argument("--md", "--model_det", dest="model_det",
                         default="weights/yolov5s/yolov5s-face.onnx",
                         help='Path to yolov5-face detection onnx file. (default: %(default)s).')
-    parser.add_argument("-mf", "--model_feat",
+    parser.add_argument("--mf", "--model_feat", dest="model_feat",
                         default="weights/mobile_facenet/mobile_facenet.onnx",
                         help='Path to face feature extracter onnx file. (default: %(default)s).')
-    parser.add_argument("-id", "--face_det_in_size",
-                        nargs=2,
-                        default=(640, 640),
+    parser.add_argument("--id", "--face_det_in_size", dest="face_det_in_size",
+                        nargs=2, default=(640, 640),
                         help='Input images are resized to this size (w, h) for face det. (default: %(default)s).')
-    parser.add_argument("-if", "--face_feat_in_size",
-                        nargs=2,
-                        default=(112, 112),
+    parser.add_argument("--if", "--face_feat_in_size", dest="face_feat_in_size",
+                        nargs=2, default=(112, 112),
                         help='Face images are resized to this size (w, h) for feature ext. (default: %(default)s).')
     args = parser.parse_args()
     print("Current Arguments: ", args)

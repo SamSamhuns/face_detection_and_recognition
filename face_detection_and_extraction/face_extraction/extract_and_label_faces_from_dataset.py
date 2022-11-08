@@ -15,7 +15,7 @@ from modules.utils.image import calculate_bbox_iou, get_distinct_rgb_color
 from modules.yolov5_face.onnx.onnx_utils import check_img_size
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
-from modules.openvino.model import OVModel
+from modules.openvino.model import OVFeatModel
 
 today = datetime.today()
 year, month, day, hour, minute, sec = today.year, today.month, today.day, today.hour, today.minute, today.second
@@ -89,10 +89,10 @@ class Net(object):
             self.feature_net = onnxruntime.InferenceSession(
                 "weights/mobile_facenet/mobile_facenet.onnx")
         elif feat_net_type == "FACE_REID_MNV3":
-            self.feature_net = OVModel(
+            self.feature_net = OVFeatModel(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
-                det_thres=None, bbox_area_thres=None, verbose=False)
+                verbose=False)
         else:
             raise NotImplementedError(
                 f"{feat_net_type} feature extraction net is not implemented."
@@ -151,9 +151,8 @@ class Net(object):
         """
         Get face features with face re-identification MobileNet-V2 model
         """
-        feats = self.feature_net.inference_img(
-            face, preprocess_func=cv2.resize)
-        return feats[0].squeeze(axis=-1).squeeze(axis=-1)
+        feats = self.feature_net(face).astype(np.float32)
+        return feats
 
 
 class FrameFacesObj(object):

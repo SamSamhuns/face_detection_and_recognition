@@ -13,16 +13,16 @@ from datetime import datetime
 
 sys.path.append(".")
 from modules.utils.parser import get_argparse
-from modules.utils.files import get_file_type, read_pickle
+from modules.utils.files import get_file_type, read_json, gen_class2label_from_dir
 from modules.utils.image import check_img_size, scale_coords
-from modules.opencv2_dnn.model import load_model as load_OpenCV2Model
+from modules.opencv2_dnn.model import OpenCVFaceDetModel
 from modules.yolov5_face.onnx.onnx_utils import inference_onnx_model_yolov5_face as inf_yolov5
 from modules.yolov5_face.onnx.onnx_utils import get_bboxes_confs_areas as get_bboxes_confs_areas_yolov5
 from modules.face_detection_trt_server.inference import TritonServerInferenceSession as face_det_trt_sess
 from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
 from modules.facenet_age_trt_server.inference import TritonServerInferenceSession as face_age_trt_sess
 from modules.facenet_gender_trt_server.inference import TritonServerInferenceSession as face_gender_trt_sess
-from modules.openvino.model import OVModel
+from modules.openvino.model import OVFeatModel
 
 
 today = datetime.today()
@@ -33,7 +33,6 @@ logging.basicConfig(filename=f'logs/extraction_statistics_{year}{month}{day}_{ho
                     level=logging.INFO)
 
 # ######################## Settings ##################################
-CLASS_NAME_TO_LABEL_DICT = read_pickle("data/class_name_to_label.pkl")
 # max number of faces to consider from each frame for feat ext
 MAX_N_FACES_PER_FRAME = 3
 # max number of frames from which faces are extracted
@@ -91,16 +90,16 @@ class Net(object):
                 "weights/mobile_facenet/mobile_facenet.onnx")
             self.FACE_FEATURE_SIZE = 512
         elif feat_net_type == "FACE_REID_MNV2":
-            self.feature_net = OVModel(
+            self.feature_net = OVFeatModel(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
-                det_thres=None, bbox_area_thres=None, verbose=False)
+                verbose=False)
             self.FACE_FEATURE_SIZE = 256
         elif feat_net_type == "FACENET_OV":
-            self.feature_net = OVModel(
+            self.feature_net = OVFeatModel(
                 xml_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.xml",
                 bin_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.bin",
-                det_thres=None, bbox_area_thres=None, verbose=False)
+                verbose=False)
             self.FACE_FEATURE_SIZE = 512
         elif feat_net_type == "FACENET_TRT":
             self.feature_net = face_feat_trt_sess()
@@ -169,9 +168,8 @@ class Net(object):
         Get face features with openvino face feat ext model
         i.e. face re-identification MobileNet-V2, facenet_20180408_102900
         """
-        features = self.feature_net.inference_img(
-            face, preprocess_func=cv2.resize).astype(np.float32)[0]
-        return features.squeeze()
+        features = self.feature_net(face).astype(np.float32)
+        return features
 
 
 class FrameFacesObj(object):
@@ -219,10 +217,10 @@ def load_net(model, prototxt, feat_net_type, det_thres, bbox_area_thres, model_i
             face_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
             face_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
             print("Using GPU device")
-        opencv2_model = load_OpenCV2Model(
-            model, prototxt, det_thres, bbox_area_thres, model_in_size, device)
 
-        def inf_func(net, image, **kwargs):
+        opencv2_model = OpenCVFaceDetModel(face_net, model_in_size, det_thres, bbox_area_thres)
+
+        def inf_func(net, image, *args, **kwargs):
             return opencv2_model(image)
 
         def bbox_conf_area_func(dets, det_thres, bbox_area_thres, orig_size, in_size):
@@ -299,7 +297,8 @@ def extract_face_feat_conf_area_list(net, img, save_feat):
 
 def save_extracted_faces(frames_faces_obj_list, media_root, class_name,
                          save_face, faces_save_dir,
-                         save_feat, feats_save_dir, face_feature_size):
+                         save_feat, feats_save_dir, face_feature_size,
+                         class2label_dict):
     """
     args;
         frames_faces_obj_list: list of FrameFacesObj for each frame
@@ -341,7 +340,7 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name,
     os.makedirs(feats_save_dir, exist_ok=True)
     npy_savepath = os.path.join(feats_save_dir, media_root + ".npy")
     annot_dict["class_name"] = class_name
-    annot_dict["label"] = CLASS_NAME_TO_LABEL_DICT[class_name]
+    annot_dict["label"] = class2label_dict[class_name]
     if save_feat:
         if len(frames_faces_obj_list) < MAX_N_FRAME_FROM_VID:
             frame_diff = MAX_N_FRAME_FROM_VID - len(frames_faces_obj_list)
@@ -357,6 +356,10 @@ def save_extracted_faces(frames_faces_obj_list, media_root, class_name,
 def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
     init_tm = time.time()
     dir_list = glob.glob(os.path.join(source_dir, "*"))
+
+    json_label_path = os.path.join(source_dir, "class2label.json")
+    gen_class2label_from_dir(source_dir, json_label_path)
+    class2label_dict = read_json(json_label_path)
 
     total_media_ext, total_faces_ext = 0, 0
     skip_class = set([])
@@ -424,7 +427,8 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
 
                 faces_extracted = save_extracted_faces(
                     frames_faces_obj_list, media_root, class_name, save_face,
-                    faces_save_dir, save_feat, feats_save_dir, net.FACE_FEATURE_SIZE)
+                    faces_save_dir, save_feat, feats_save_dir, net.FACE_FEATURE_SIZE,
+                    class2label_dict)
                 class_faces_ext += faces_extracted
                 class_media_ext += 1
             except Exception as e:
@@ -448,28 +452,30 @@ def filter_faces_from_data(source_dir, target_dir, net, save_face, save_feat):
 def main():
     parser = get_argparse(description="Dataset face extraction")
     parser.remove_argument("input_src")
-    parser.add_argument('-sd', '--source_datadir_path',
+    parser.add_argument('--sd', '--source_datadir_path', dest="source_datadir_path",
                         type=str, required=True,
                         help="""Source dataset dir path with
                         class imgs/vids inside folders.""")
-    parser.add_argument('-td', '--target_datadir_path',
+    parser.add_argument('--td', '--target_datadir_path', dest="target_datadir_path",
                         type=str, default="face_data",
                         help="""Target dataset dir path where
                         imgs will be sep into train & test. (default: %(default)s)""")
-    parser.add_argument("-ft", "--face_feat_type", default="FACE_REID_MNV2",
+    parser.add_argument("--ft", "--face_feat_type", default="FACE_REID_MNV2", dest="face_feat_type",
                         choices=["FACE_REID_MNV2", "MOBILE_FACENET_ONNX",
                                  "FACENET_OV", "FACENET_TRT", "FACENET_AGE_GENDER"],
                         help="Type of face feature extracter to use for tracking. (default: %(default)s)")
-    parser.add_argument("-is", "--input_size",
-                        nargs=2,
-                        default=(400, 500),
+    parser.add_argument("--is", "--input_size", dest="input_size",
+                        nargs=2, default=(400, 500),
                         help='Input images are resized to this (width, height) -is 640 640. (default: %(default)s).')
-    parser.add_argument('-noface', '--dont_save_face',
+    parser.add_argument('--noface', '--dont_save_face', dest="dont_save_face",
                         action="store_false",
                         help="""Flag avoids saving faces if set.""")
-    parser.add_argument('-nofeat', '--dont_save_feat',
+    parser.add_argument('--nofeat', '--dont_save_feat', dest="dont_save_feat",
                         action="store_false",
                         help="""Flag avoids saving face feats if set.""")
+    parser.add_argument("-p", "--prototxt", dest="prototxt",
+                        default="weights/face_detection_caffe/deploy.prototxt.txt",
+                        help="Path to 'deploy' prototxt file. (default: %(default)s)")
     args = parser.parse_args()
     logging.info(f"Arguments used: {args}")
     print("Current Arguments: ", args)

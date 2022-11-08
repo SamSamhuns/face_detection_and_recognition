@@ -15,7 +15,7 @@ from datetime import datetime
 sys.path.append(".")
 from modules.files import get_file_type, read_pickle
 from modules.facenet_trt_server.inference import TritonServerInferenceSession as face_feat_trt_sess
-from modules.openvino.model import OVModel
+from modules.openvino.model import OVFeatModel
 
 
 mimetypes.init()
@@ -68,15 +68,15 @@ class Net(object):
             self.feature_net = onnxruntime.InferenceSession(
                 "weights/MOBILE_FACENET/MOBILE_FACENET.onnx")
         elif feat_net_type == "FACE_REID_MNV2":
-            self.feature_net = OVModel(
+            self.feature_net = OVFeatModel(
                 xml_path="weights/face_reidentification_retail_0095/FP32/model.xml",
                 bin_path="weights/face_reidentification_retail_0095/FP32/model.bin",
-                det_thres=None, bbox_area_thres=None, verbose=False)
+                verbose=False)
         elif feat_net_type == "FACENET_OV":
-            self.feature_net = OVModel(
+            self.feature_net = OVFeatModel(
                 xml_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.xml",
                 bin_path="weights/facenet_20180408_102900/facenet_openvino/20180408-102900.bin",
-                det_thres=None, bbox_area_thres=None, verbose=False)
+                verbose=False)
         elif feat_net_type == "FACENET_TRT":
             self.feature_net = face_feat_trt_sess()
         else:
@@ -119,9 +119,8 @@ class Net(object):
         Get face features with openvino face feat ext model
         i.e. face re-identification MobileNet-V2, facenet_20180408_102900
         """
-        features = self.feature_net.inference_img(
-            face, preprocess_func=cv2.resize).astype(np.float32)[0]
-        return features.squeeze()
+        features = self.feature_net(face).astype(np.float32)
+        return features
 
 
 def save_extracted_feat(feat, media_root, class_name, feats_save_dir):

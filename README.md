@@ -11,12 +11,12 @@
 
 ## Setup
 
-Inside a virtual environment:
+Inside a `conda` or `venv` virtual environment:
 
 ```bash
 pip install --upgrade pip
-# install requirements for all face detection models
-pip install -r requirements.txt
+# install requirements for all face detection
+pip install -r requirements.txt  # required for face_extraction
 # install model specific requirements
 pip install -r face_detection_and_extraction/requirements/trt_server.txt
 pip install -r face_detection_and_extraction/requirements/mobile_facenet.txt
@@ -26,6 +26,8 @@ pip install -r face_detection_and_extraction/requirements/opencv.txt
 pip install -r face_detection_and_extraction/requirements/openvino.txt
 pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
 ```
+
+Download the model weights using the instructions [below](###-face-detection-and-extraction-weights-download).
 
 ## Face Detection Models Implemented
 
@@ -52,32 +54,38 @@ Performance recorded with same parameters as face-detection above.
 
 Instructions inside `face_detection_and_extraction` for face detection in images, video, and webcam feed along with face extraction from a dataset of images.
 
-## Similar Face Filtering for faces of the same person
-
-Extract faces from a face dataset that are similiar to a reference face dataset for cleaning face data. Instructions inside `similar_face_filtering`.
-
-## Model weights
+### Face detection and extraction weights download
 
 Download `weights.zip` and unzip weights using `gdown` or directly from this [Google Drive link](https://drive.google.com/file/d/17FXIcOSaVwvpjsnfenkm1bZNmmG6VBIi/view?usp=sharing)
 
 ```shell
 pip install gdown
 gdown 17FXIcOSaVwvpjsnfenkm1bZNmmG6VBIi
-unzip weights.zip
+unzip weights.zip -d face_detection_and_extraction/
 rm weights.zip
 ```
 
 Or, download weights individually from the GitHub.
 
 ```shell
+wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/weights.zip -O face_detection_and_extraction/weights.zip
+unzip face_detection_and_extraction/weights.zip -d face_detection_and_extraction/
+rm face_detection_and_extraction/weights.zip
+```
+
+## Similar Face Filtering for faces of the same person
+
+Extract faces from a face dataset that are similiar to a reference face dataset for cleaning face data. Instructions inside `similar_face_filtering`.
+
+### Similar face filtering weights download
+
+Download weights from GitHub.
+
+```shell
 mkdir -p similar_face_filtering/models/facenet/
 wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/facenet_keras_p38.zip -O similar_face_filtering/models/facenet/facenet_keras_p38.zip
 unzip similar_face_filtering/models/facenet/facenet_keras_p38.zip -d similar_face_filtering/models/facenet/
 rm similar_face_filtering/models/facenet/facenet_keras_p38.zip
-
-wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/weights.zip -O face_detection_and_extraction/weights.zip
-unzip face_detection_and_extraction/weights.zip -d face_detection_and_extraction/
-rm face_detection_and_extraction/weights.zip
 ```
 
 ### Acknowledgements

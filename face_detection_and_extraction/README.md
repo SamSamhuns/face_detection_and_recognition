@@ -37,11 +37,11 @@ python detect_face_yolov5_face.py                     # webcam mode
 python detect_face_yolov5_face.py -i PATH_TO_IMG/VID  # image or video mode
 ```
 
-## Face Detection model evaluation
+# Face Detection model evaluation
 
-### Evaluation on WIDERFACE dataset
+## Evaluation on WIDERFACE dataset
 
-#### Install pycocotools
+### Install pycocotools
 
 `pycocotools` is required for evaluation script.
 
@@ -56,7 +56,7 @@ make
 pip install .
 ```
 
-#### Download WIDER_val split and run evaluation
+### Download WIDER_val split and run evaluation
 
 Download `wider_face_split` and `WIDER_val` from <http://shuoyang1213.me/WIDERFACE/> and place them inside `eval` directory.
 
@@ -64,39 +64,50 @@ Download `wider_face_split` and `WIDER_val` from <http://shuoyang1213.me/WIDERFA
 # by default run wider_face_val_split with opencv face detection
 PYTHONPATH=$PYTHONPATH:./ python eval/eval_face_detector.py eval/wider_face_split/wider_face_val_bbx_gt.txt eval/WIDER_val/images/
 # run wider_face_val_split with yolov5s face detection
-PYTHONPATH=$PYTHONPATH:./ python eval2/eval_face_detector.py eval1/wider_face_split/wider_face_val_bbx_gt.txt eval1/WIDER_val/images/ --model_type yolov5_face --model weights/yolov5s/yolov5s-face.pt
+PYTHONPATH=$PYTHONPATH:./ python eval/eval_face_detector.py eval1/wider_face_split/wider_face_val_bbx_gt.txt eval1/WIDER_val/images/ --model_type yolov5_face --model weights/yolov5s/yolov5s-face.pt
 ```
 
-### Face Extraction Dataset Organization
+# Face Extraction from Dataset
 
-    # Raw Data Organization
-           dataset
-                 |_ class_1
-                           |_ img1/vid1
-                           |_ img2/vid2
-                           |_ ....
-                 |_ class_2
-                           |_ img1/vid1
-                           |_ img2/vid2
-                           |_ ....
-                 ...
+Extract face images in bulk from an image dataset.
 
-    example raw data path    = "raw_data/dataset"
-    example target data path = "target_data/dataset"
+## Face Extraction from imdb-wiki dataset
+
+Download the imdb-wiki data from [IMDB-WIKI](https://data.vision.ee.ethz.ch/cvl/rrothe/imdb-wiki/) and place it inside the `face_detection_and_extraction/data` directory.
+
+```shell
+python face_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
+```
 
 ## Face Extraction from dataset
 
 ```shell
-python data_extraction/extract_faces_from_dataset.py -rd RAW_DATA_PATH -td TARGET_DATA_PATH
+python face_extraction/extract_faces_from_dataset.py --rd RAW_DATA_PATH --td TARGET_DATA_PATH
 ```
+
+**Raw Data Organization:**
+
+       dataset
+             |_ class_1
+                       |_ img1/vid1
+                       |_ img2/vid2
+                       |_ ....
+             |_ class_2
+                       |_ img1/vid1
+                       |_ img2/vid2
+                       |_ ....
+             ...
+
+example raw data path    = "raw_data/dataset"
+example target data path = "target_data/dataset"
 
 ## Face Extraction and Labelling from dataset
 
 ```shell
-python data_extraction/extract_and_label_faces_from_dataset.py -rd RAW_DATA_PATH -td TARGET_DATA_PATH
+python face_extraction/extract_and_label_faces_from_dataset.py --rd RAW_DATA_PATH --td TARGET_DATA_PATH
 ```
 
-Annotation data is also saved in the following pickle format:
+**Annotation data is also saved in the following pickle format:**
 
     {
       "media_id": "0123456789",
@@ -131,11 +142,7 @@ Annotation data is also saved in the following pickle format:
       ]
     }
 
-## Face Extraction from imdb-wiki dataset
-
-```shell
-python data_extraction/extract_and_clean_imdb_wiki_faces.py -d {data/imdb, data/wiki}
-```
+# For Developers
 
 ## Running Tests
 

@@ -27,7 +27,7 @@ pip install -r face_detection_and_extraction/requirements/openvino.txt
 pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
 ```
 
-Download the model weights using the instructions [below](#-face-detection-and-extraction-weights-download).
+Download the model weights using the instructions [below](#face-detection-and-extraction-weights-download).
 
 ## Face Detection Models Implemented
 

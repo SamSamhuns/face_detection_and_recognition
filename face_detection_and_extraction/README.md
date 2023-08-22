@@ -1,6 +1,6 @@
 # Face Detection
 
-Face detection with different models. Use `-h` flag for help.
+Face detection with different models. Use `-h` flag for help. Requirements must be installed beforehand. Note if the webcam mode is not working, make sure the terminal has permission to access the webcam.
 
 ## blazeface face detection
 

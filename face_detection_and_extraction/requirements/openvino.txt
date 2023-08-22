@@ -1,2 +1,2 @@
 -r common.txt
-openvino==2022.1.0
+openvino==2022.3.1

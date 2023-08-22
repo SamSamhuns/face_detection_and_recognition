@@ -1,6 +1,6 @@
 -r common.txt
-torch==1.12.0
-torchvision==0.13.0
-onnx==1.12.0
-onnx-simplifier==0.3.6
-onnxruntime==1.10.0
+torch==2.0.1
+torchvision==0.15.2
+onnx==1.14.0
+onnx-simplifier==0.4.33
+onnxruntime==1.15.1

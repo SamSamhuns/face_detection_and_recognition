@@ -1,3 +1,4 @@
 nvidia-pyindex==1.0.9
-python-on-whales==0.64.2
-tritonclient[grpc]==2.36.0
+python-on-whales==0.69.0
+tritonclient[grpc]==2.42.0
+wheel==0.42.0

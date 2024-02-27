@@ -1,2 +1,3 @@
-tensorflow==2.15.0
+tensorflow==2.15.0; sys_platform == 'darwin'
+tensorflow==2.13.1; sys_platform == 'linux'
 numpy

@@ -1,6 +1,8 @@
 -r common.txt
-torch==2.2.1
-torchvision==0.17.1
+torch==2.2.1; sys_platform == 'darwin'
+torch==2.1.2; sys_platform == 'linux'
+torchvision==0.17.1; sys_platform == 'darwin'
+torchvision==0.16.2; sys_platform == 'linux'
 onnx==1.15.0
 onnx-simplifier==0.4.35
 onnxruntime==1.17.1

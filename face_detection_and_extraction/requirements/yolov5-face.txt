@@ -7,5 +7,7 @@ PyYAML==6.0.1
 requests==2.31.0
 seaborn==0.13.2
 thop==0.1.1.post2209072238
-torch==2.2.1
-torchvision==0.17.1
+torch==2.2.1; sys_platform == 'darwin'
+torch==2.1.2; sys_platform == 'linux'
+torchvision==0.17.1; sys_platform == 'darwin'
+torchvision==0.16.2; sys_platform == 'linux'

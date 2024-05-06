@@ -1,13 +1,23 @@
-# Face Detection
+# Face Detection with OpenCV Caffemodels, MTCNN, Blazeface, and YOLOv5-face
 
 [![Python 3.8](https://img.shields.io/badge/python-3.8-green.svg)](https://www.python.org/downloads/release/python-380/)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)](https://www.python.org/downloads/release/python-390/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10-green.svg)](https://www.python.org/downloads/release/python-3100/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-green.svg)](https://www.python.org/downloads/release/python-3110/)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/07b06636035d460c8e6e53a6eb88eea4)](https://www.codacy.com/gh/SamSamhuns/face_detection_and_recognition/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=SamSamhuns/face_detection_and_recognition&amp;utm_campaign=Badge_Grade)
 [![tests](https://github.com/SamSamhuns/face_detection_and_recognition/actions/workflows/main.yml/badge.svg)](https://github.com/SamSamhuns/face_detection_and_recognition/actions/workflows/main.yml)
 
-## Face Detection with OpenCV Caffemodels, MTCNN, Blazeface, and YOLOv5-face
-
 <img src="readme_img/detected_faces.jpg" />
+
+- [Face Detection with OpenCV Caffemodels, MTCNN, Blazeface, and YOLOv5-face](#face-detection-with-opencv-caffemodels-mtcnn-blazeface-and-yolov5-face)
+  - [Setup](#setup)
+  - [Face Detection Models](#face-detection-models)
+  - [Face Age and Gender Estimation Models](#face-age-and-gender-estimation-models)
+  - [Face Detection and Extraction](#face-detection-and-extraction)
+    - [Face detection and extraction weights download](#face-detection-and-extraction-weights-download)
+  - [Similar Face Filtering for faces of the same person](#similar-face-filtering-for-faces-of-the-same-person)
+    - [Similar face filtering weights download](#similar-face-filtering-weights-download)
+    - [Acknowledgements](#acknowledgements)
 
 ## Setup
 
@@ -18,18 +28,20 @@ pip install --upgrade pip
 # install requirements for all face detection
 pip install -r requirements.txt  # required for face_extraction
 # install model specific requirements
-pip install -r face_detection_and_extraction/requirements/trt_server.txt
 pip install -r face_detection_and_extraction/requirements/mobile_facenet.txt
 pip install -r face_detection_and_extraction/requirements/blazeface.txt
 pip install -r face_detection_and_extraction/requirements/mtcnn.txt
 pip install -r face_detection_and_extraction/requirements/opencv.txt
 pip install -r face_detection_and_extraction/requirements/openvino.txt
 pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
+# Note for trt_server and python>=3.10, install wheel pkg first
+pip install wheel
+pip install -r face_detection_and_extraction/requirements/trt_server.txt
 ```
 
 Download the model weights using the instructions [below](#face-detection-and-extraction-weights-download).
 
-## Face Detection Models Implemented
+## Face Detection Models
 
 CPU Performance recorded on a MacBook Pro with a **2.4 GHz 8-Core Intel Core i9** processor and **16 GB 2400 MHz DDR4** memory with no intensive programs running in the background on a video (**original resolution 576x1024**) with two detectable faces.
 
@@ -42,7 +54,7 @@ CPU Performance recorded on a MacBook Pro with a **2.4 GHz 8-Core Intel Core i9*
 | yolov5-face             |     13 <br/>  13     | yolov5s <br/> yolov5n                                                 | :white_check_mark: <br/> :white_check_mark: |
 | arcface                 |         TODO         | arcface                                                               |             :white_large_square:            |
 
-### Face Age and Gender Estimation
+## Face Age and Gender Estimation Models
 
 Performance recorded with same parameters as face-detection above.
 
@@ -52,7 +64,7 @@ Performance recorded with same parameters as face-detection above.
 
 ## Face Detection and Extraction
 
-Instructions inside `face_detection_and_extraction` for face detection in images, video, and webcam feed along with face extraction from a dataset of images.
+Instructions inside [face_detection_and_extraction](face_detection_and_extraction/README.md) directory for face detection in images, video, and webcam feed along with face extraction from a dataset of images.
 
 ### Face detection and extraction weights download
 
@@ -75,7 +87,7 @@ rm face_detection_and_extraction/weights.zip
 
 ## Similar Face Filtering for faces of the same person
 
-Extract faces from a face dataset that are similiar to a reference face dataset for cleaning face data. Instructions inside `similar_face_filtering`.
+Extract faces from a face dataset that are similiar to a reference face dataset for cleaning face data. Instructions inside the [similar_face_filtering](face_detection_and_recognition/similar_face_filtering/README.md) directory readme.
 
 ### Similar face filtering weights download
 

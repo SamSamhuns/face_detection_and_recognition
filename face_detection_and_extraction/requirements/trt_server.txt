@@ -1,4 +1,4 @@
+wheel==0.43.0  # should be installed first with pip install wheel separately
 nvidia-pyindex==1.0.9
 python-on-whales==0.69.0
 tritonclient[grpc]==2.42.0
-wheel==0.42.0

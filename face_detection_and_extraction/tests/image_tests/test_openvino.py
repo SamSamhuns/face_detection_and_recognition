@@ -48,11 +48,20 @@ def test_3_faces_jpg(mock_openvino_model, mock_3_faces_image):
     pred_boxes = np.array(post_dets.boxes, dtype=np.float32)
     assert len(gt_boxes) == len(pred_boxes)
 
-    ious = [calculate_bbox_iou(a, b) for a, b in zip(gt_boxes, pred_boxes)]
-    iou_mat = np.zeros([len(gt_boxes), len(gt_boxes)])
-    np.fill_diagonal(iou_mat, ious)
-    gt_idxs, pred_idxs = linear_sum_assignment(-iou_mat)
-    is_kept = iou_mat[gt_idxs, pred_idxs] >= 0.8
+    # Calculate IoUs and form the cost matrix (negative because we want to maximize IoU)
+    iou_mat = np.zeros((len(gt_boxes), len(pred_boxes)))
+    for i, gt_box in enumerate(gt_boxes):
+        for j, pred_box in enumerate(pred_boxes):
+            iou_mat[i, j] = calculate_bbox_iou(gt_box, pred_box)
 
-    assert gt_idxs[is_kept].shape[0] == gt_boxes.shape[0]
-    assert np.allclose(gt_areas, post_dets.bbox_areas, atol=0.001)
+     # Solve the assignment problem to maximize the sum of IoUs
+    gt_idxs, pred_idxs = linear_sum_assignment(-iou_mat)
+
+    # Verify IoUs are above a reasonable threshold, e.g., 0.8
+    assert np.all(iou_mat[gt_idxs, pred_idxs] >=0.8), \
+        "Some IoUs are below the threshold of 0.8."
+
+    # Check areas with the alignment given by the Hungarian algorithm
+    aligned_areas = post_dets.bbox_areas[pred_idxs]
+    assert np.allclose(gt_areas, aligned_areas, atol=0.001), \
+        "Area close check failed with aligned indices."

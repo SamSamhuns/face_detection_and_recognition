@@ -36,11 +36,11 @@ def test_3_faces_jpg(mock_openvino_model, mock_3_faces_image):
         dets, (w, h), (iw, ih), model.det_thres, model.bbox_area_thres)
 
     gt_areas = np.array([
-        0.0377225852, 0.0099964741, 0.0082628834
+        0.0099964741, 0.0377225852, 0.0082628834
     ])
     gt_boxes = np.array([
-        [513, 203, 634, 365],
         [408, 213, 469, 299],
+        [513, 203, 634, 365],
         [285, 231, 342, 307],
     ], dtype=np.float32)
 

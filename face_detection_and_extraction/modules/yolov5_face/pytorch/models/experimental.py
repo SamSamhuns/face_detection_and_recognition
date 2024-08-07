@@ -118,7 +118,7 @@ def attempt_load(weights, map_location=None):
     # Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a
     model = Ensemble()
     for w in weights if isinstance(weights, list) else [weights]:
-        model.append(torch.load(w, map_location=map_location)[
+        model.append(torch.load(w, map_location=map_location, weights_only=False)[
                      'model'].float().fuse().eval())  # load FP32 model
 
     # Compatibility updates

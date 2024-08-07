@@ -1,6 +1,6 @@
 -r common.txt
-onnx==1.16.0
+onnx==1.16.1
 onnx-simplifier==0.4.36
-onnxruntime==1.17.3
-torch==2.3.0; sys_platform == 'darwin'
+onnxruntime==1.18.1
+torch==2.4.0; sys_platform == 'darwin'
 torch==2.1.2; sys_platform == 'linux'

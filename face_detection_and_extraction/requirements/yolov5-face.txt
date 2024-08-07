@@ -2,7 +2,7 @@
 onnx==1.16.1
 onnx-simplifier==0.4.36
 onnxruntime==1.18.1
-pillow==10.3.0
+pillow==10.4.0
 PyYAML==6.0.1
 requests==2.32.0
 seaborn==0.13.2

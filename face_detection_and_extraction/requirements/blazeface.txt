@@ -2,5 +2,4 @@
 onnx==1.16.1
 onnx-simplifier==0.4.36
 onnxruntime==1.18.1
-torch==2.4.0; sys_platform == 'darwin'
-torch==2.1.2; sys_platform == 'linux'
+torch==2.4.0

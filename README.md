@@ -71,7 +71,7 @@ Download `weights.zip` and unzip weights using `gdown` or directly from this [Go
 
 ```shell
 pip install gdown
-gdown 1VY99_B_ZtQie_r6oRiCVR7nVSPXwMbOw
+gdown 12807If9AlrX3hADgl820Kxl7sT7imtH-
 unzip weights.zip -d face_detection_and_extraction/
 rm weights.zip
 ```

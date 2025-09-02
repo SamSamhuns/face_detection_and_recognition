@@ -1,6 +1,5 @@
 # Face Detection
 
-[![Python 3.10](https://img.shields.io/badge/python-3.10-green.svg)](https://www.python.org/downloads/release/python-3100/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-green.svg)](https://www.python.org/downloads/release/python-3110/)
 
 Face detection with different models. Use `-h` flag for help. Requirements must be installed beforehand. Note if the webcam mode is not working, make sure the terminal has permission to access the webcam.

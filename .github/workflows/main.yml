@@ -2,9 +2,9 @@ name: tests
 
 on:
   push:
-    branches: master
+    branches: [master]
   pull_request:
-    branches: master
+    branches: [master]
 
 jobs:
   face-detection:
@@ -12,37 +12,44 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04]
-        python: ["3.9", "3.10", "3.11"]
+        python: ["3.11"]
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
+
       - name: Cache python modules
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
-          restore-keys: |
-            ${{ runner.os }}-pkg-deps-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
+          key: ${{ runner.os }}-pip-${{ matrix.python }}-${{ hashFiles('requirements.txt', 'face_detection_and_extraction/tests/requirements-test.txt') }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
-      - name: Download model weights
-        run: |
-          wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/weights.zip -O face_detection_and_extraction/weights.zip
-          unzip face_detection_and_extraction/weights.zip -d face_detection_and_extraction/
-          rm face_detection_and_extraction/weights.zip
+          pip install -r face_detection_and_extraction/tests/requirements-test.txt
+
       - name: Cache model weights
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: face_detection_and_extraction/weights
-          key: ${{ runner.os }}-model-wts-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
-          restore-keys: |
-            ${{ runner.os }}-model-wts-${{ matrix.python }}-${{ hashFiles('requirements.txt') }}-
+          key: ${{ runner.os }}-weights-${{ hashFiles('face_detection_and_extraction/weights/*') }}
+
+      - name: Download model weights if not cached
+        run: |
+          if [ ! -d "face_detection_and_extraction/weights" ] || [ -z "$(ls -A face_detection_and_extraction/weights)" ]; then
+            wget https://github.com/SamSamhuns/face_detection_and_recognition/releases/download/v2.0.0/weights.zip -O face_detection_and_extraction/weights.zip
+            unzip face_detection_and_extraction/weights.zip -d face_detection_and_extraction/
+            rm face_detection_and_extraction/weights.zip
+          fi
+
       - name: Run unittests
         run: |
-          cd face_detection_and_extraction && python -m pytest --cov=modules tests
+          cd face_detection_and_extraction
+          python -m pytest --cov=modules tests

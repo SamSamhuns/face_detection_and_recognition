@@ -1,6 +1,5 @@
 # Face Detection with OpenCV Caffemodels, MTCNN, Blazeface, and YOLOv5-face
 
-[![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)](https://www.python.org/downloads/release/python-390/)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-green.svg)](https://www.python.org/downloads/release/python-3100/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-green.svg)](https://www.python.org/downloads/release/python-3110/)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/07b06636035d460c8e6e53a6eb88eea4)](https://www.codacy.com/gh/SamSamhuns/face_detection_and_recognition/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=SamSamhuns/face_detection_and_recognition&amp;utm_campaign=Badge_Grade)
@@ -20,6 +19,22 @@
 
 ## Setup
 
+Using `poetry` (Recommended):
+
+```bash
+# Install all deps
+poetry install --all-groups
+# Install specific deps
+poetry install --with mobile-facenet,pytorch,onnx
+poetry install --with blazeface,pytorch,onnx
+poetry install --with mtcnn,tensorflow
+# opencv deps are present in the default installation
+poetry install --with openvino
+poetry install --with yolov5-face,pytorch,onnx
+```
+
+Note: After updating `pyproject.toml/poetry.lock`, run `python face_detection_and_extraction/scripts/export_poetry_to_reqs.py` to update requirement files with the updated library versions frompoetry.
+
 Inside a `conda` or `venv` virtual environment:
 
 ```bash
@@ -33,9 +48,6 @@ pip install -r face_detection_and_extraction/requirements/mtcnn.txt
 pip install -r face_detection_and_extraction/requirements/opencv.txt
 pip install -r face_detection_and_extraction/requirements/openvino.txt
 pip install -r face_detection_and_extraction/requirements/yolov5-face.txt
-# Note for trt_server and python>=3.10, install wheel pkg first
-pip install wheel
-pip install -r face_detection_and_extraction/requirements/trt_server.txt
 ```
 
 Download the model weights using the instructions [below](#face-detection-and-extraction-weights-download).

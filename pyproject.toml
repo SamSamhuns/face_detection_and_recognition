@@ -1,0 +1,144 @@
+[project]
+name = "face-detection-and-extraction"
+version = "0.1.0"
+description = "Face detection, recognition, batch extraction, and similar face filtering"
+authors = [
+    {name = "SamSamhuns",email = "samhunsdamant@gmail.com"}
+]
+license = {text = "Apache 2.0"}
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "scipy (>=1.16.1,<2.0.0)",
+    "tqdm (>=4.67.1,<5.0.0)",
+    "opencv-python (>=4.10.0.84,<5.0.0)",
+    "gdown (>=5.2.0,<6.0.0)",
+    "thop (>=0.1.1.post2209072238,<0.2.0)",
+    "toml (>=0.10.2,<0.11.0)",
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
+pillow = "^10.4.0"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.11"
+
+# ==========================================
+# PYTORCH ECOSYSTEM (Shared by multiple backends)
+# ==========================================
+[tool.poetry.group.pytorch]
+optional = true
+
+[tool.poetry.group.pytorch.dependencies]
+torch = "2.6.0"
+torchvision = "0.21.0"
+
+# ==========================================
+# ONNX ECOSYSTEM (Shared by multiple backends)
+# ==========================================
+[tool.poetry.group.onnx]
+optional = true
+
+[tool.poetry.group.onnx.dependencies]
+onnx = "1.17.0"
+onnx-simplifier = "0.4.36"
+onnxruntime = "1.18.1"
+
+# ==========================================
+# TENSORFLOW ECOSYSTEM
+# ==========================================
+[tool.poetry.group.tensorflow]
+optional = true
+
+[tool.poetry.group.tensorflow.dependencies]
+tensorflow = "2.16.1"
+
+# ==========================================
+# FACE DETECTION BACKENDS
+# ==========================================
+
+# BlazeFace - Lightweight face detection
+[tool.poetry.group.blazeface]
+optional = true
+[tool.poetry.group.blazeface.dependencies]
+# Requires pytorch and onnx groups
+# Install with: poetry install --with blazeface,pytorch,onnx
+
+# Mobile FaceNet - Mobile-optimized face recognition
+[tool.poetry.group.mobile-facenet]
+optional = true
+[tool.poetry.group.mobile-facenet.dependencies]
+# Requires pytorch and onnx groups
+# Install with: poetry install --with mobile-facenet,pytorch,onnx
+
+# MTCNN - Multi-task Cascaded Convolutional Networks
+[tool.poetry.group.mtcnn]
+optional = true
+[tool.poetry.group.mtcnn.dependencies]
+mtcnn = "0.1.1"
+# Requires tensorflow group
+# Install with: poetry install --with mtcnn,tensorflow
+
+# OpenCV DNN - No additional dependencies needed
+# The opencv backend only needs the core dependencies
+
+# OpenVINO - Intel's inference engine
+[tool.poetry.group.openvino]
+optional = true
+[tool.poetry.group.openvino.dependencies]
+openvino = "2024.3.0"
+
+# YOLOv5-Face - YOLO-based face detection
+[tool.poetry.group.yolov5-face]
+optional = true
+[tool.poetry.group.yolov5-face.dependencies]
+pillow = "10.4.0"
+PyYAML = "6.0.1"
+requests = "2.32.4"
+seaborn = "0.13.2"
+thop = "0.1.1.post2209072238"
+# Requires pytorch and onnx groups
+# Install with: poetry install --with yolov5-face,pytorch,onnx
+
+# ==========================================
+# SIMILAR FACE FILTERING
+# ==========================================
+[tool.poetry.group.similar-face]
+optional = true
+[tool.poetry.group.similar-face.dependencies]
+# Requires tensorflow group
+# Install with: poetry install --with similar-face,tensorflow
+
+# ==========================================
+# POETRY EXTRAS (For pip users)
+# ==========================================
+[tool.poetry.extras]
+# Basic backends
+blazeface = ["torch", "torchvision", "onnx", "onnx-simplifier", "onnxruntime"]
+mtcnn = ["tensorflow", "mtcnn"]
+openvino = ["openvino"]
+yolov5 = ["torch", "torchvision", "onnx", "onnx-simplifier", "onnxruntime", "pillow", "PyYAML", "requests", "seaborn", "thop"]
+
+# Backend collections
+pytorch-backends = ["torch", "torchvision", "onnx", "onnx-simplifier", "onnxruntime", "pillow", "PyYAML", "requests", "seaborn", "thop"]
+tensorflow-backends = ["tensorflow", "mtcnn"]
+all-backends = ["torch", "torchvision", "onnx", "onnx-simplifier", "onnxruntime", "tensorflow", "mtcnn", "openvino", "pillow", "PyYAML", "requests", "seaborn", "thop"]
+
+# Features
+similar-face = ["tensorflow"]
+
+[tool.poetry.scripts]
+# Add your CLI scripts here if needed
+# face-detect = "face_detection_and_extraction.detect_face_opencv_dnn:main"

@@ -1,6 +1,5 @@
 # Similar Face Filtering
 
-[![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg)](https://www.python.org/downloads/release/python-390/)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-green.svg)](https://www.python.org/downloads/release/python-3100/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-green.svg)](https://www.python.org/downloads/release/python-3110/)
 
@@ -48,7 +47,7 @@ python filter_faces_using_reference.py \
 Install requirements
 
 ```shell
-pip install tests/requirements-dev.txt
+pip install -r requirements/test.txt
 ```
 
 Run tests from inside the `similar_face_filtering directory`

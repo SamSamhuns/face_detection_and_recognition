@@ -42,8 +42,8 @@ ruff = "^0.12.11"
 optional = true
 
 [tool.poetry.group.pytorch.dependencies]
-torch = "2.6.0"
-torchvision = "0.21.0"
+torch = "2.8.0"
+torchvision = "0.23.0"
 
 # ==========================================
 # ONNX ECOSYSTEM (Shared by multiple backends)

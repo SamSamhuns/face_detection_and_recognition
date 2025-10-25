@@ -18,7 +18,7 @@
 
 ## Setup
 
-Using `poetry` (Recommended):
+- Option 1. Using `poetry` (Recommended):
 
 ```bash
 # Install all deps
@@ -34,7 +34,7 @@ poetry install --with yolov5-face,pytorch,onnx
 
 Note: After updating `pyproject.toml/poetry.lock`, run `python face_detection_and_extraction/scripts/export_poetry_to_reqs.py` to update requirement files with the updated library versions frompoetry.
 
-Inside a `conda` or `venv` virtual environment:
+- Option 2. Inside a `conda` or `venv` virtual environment:
 
 ```bash
 pip install --upgrade pip
@@ -55,22 +55,22 @@ Download the model weights using the instructions [below](#face-detection-and-ex
 
 CPU Performance recorded on a MacBook Pro with a **2.4 GHz 8-Core Intel Core i9** processor and **16 GB 2400 MHz DDR4** memory with no intensive programs running in the background on a video (**original resolution 576x1024**) with two detectable faces.
 
-| Model                   |          FPS         | <center>Types</center>                                                |          <center>Supported</center>         |
+| Model                   |         FPS          | <center>Types</center>                                                |         <center>Supported</center>          |
 | :---------------------- | :------------------: | :-------------------------------------------------------------------- | :-----------------------------------------: |
 | blazeface               | 21 <br/> 16 <br/> 30 | front-camera pytorch <br/> back-camera pytorch <br/> back-camera onnx | :white_check_mark: <br/> :white_check_mark: |
-| mtcnn                   |           2          | mtcnn from facenet                                                    |              :white_check_mark:             |
-| opencv face-detection   |      18 <br/> 19     | caffemodel <br/> tensorflow graphdef                                  | :white_check_mark: <br/> :white_check_mark: |
-| openvino face-detection |      25 <br/> 28     | MobileNetV2 + multiple SSD <br/> SqueezeNet light + single SSD        | :white_check_mark: <br/> :white_check_mark: |
+| mtcnn                   |          2           | mtcnn from facenet                                                    |             :white_check_mark:              |
+| opencv face-detection   |     18 <br/> 19      | caffemodel <br/> tensorflow graphdef                                  | :white_check_mark: <br/> :white_check_mark: |
+| openvino face-detection |     25 <br/> 28      | MobileNetV2 + multiple SSD <br/> SqueezeNet light + single SSD        | :white_check_mark: <br/> :white_check_mark: |
 | yolov5-face             |     13 <br/>  13     | yolov5s <br/> yolov5n                                                 | :white_check_mark: <br/> :white_check_mark: |
-| arcface                 |         TODO         | arcface                                                               |             :white_large_square:            |
+| arcface                 |         TODO         | arcface                                                               |            :white_large_square:             |
 
 ## Face Age and Gender Estimation Models
 
 Performance recorded with same parameters as face-detection above.
 
-| Model  | FPS | Types                |      Supported     |
-| :----- | :-- | :------------------- | :----------------: |
-| opencv | 12  | Age and Gender Model | :white_check_mark: |
+| Model  | FPS  | Types                |     Supported      |
+| :----- | :--- | :------------------- | :----------------: |
+| opencv | 12   | Age and Gender Model | :white_check_mark: |
 
 ## Face Detection and Extraction
 
@@ -82,7 +82,7 @@ Download `weights.zip` and unzip weights using `gdown` or directly from this [Go
 
 ```shell
 pip install gdown
-gdown 12807If9AlrX3hADgl820Kxl7sT7imtH-
+gdown 13x471ZMBEWdcagjVgE8C-UJ-c9OjC7NY
 unzip weights.zip -d face_detection_and_extraction/
 rm weights.zip
 ```

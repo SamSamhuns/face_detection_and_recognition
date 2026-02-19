@@ -24,6 +24,9 @@ def format_dependency(name: str, spec: Union[str, dict]) -> str:
             # Poetry caret to pip format: ^5.2.0 means >=5.2.0,<6.0.0
             version = spec[1:]
             return f"{name}>={version}"
+        elif spec[0] in "<>!=~":
+            # Already a PEP 440 specifier (e.g. >=1.2.3)
+            return f"{name}{spec}"
         else:
             return f"{name}=={spec}"
     elif isinstance(spec, dict):

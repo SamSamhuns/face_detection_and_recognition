@@ -37,6 +37,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --no-cache-dir -r requirements.txt
           python -m pip install --no-cache-dir -r face_detection_and_extraction/tests/requirements-test.txt
+          python -m pip install --upgrade setuptools
 
       - name: Cache model weights
         uses: actions/cache@v4

@@ -3,7 +3,7 @@ PyYAML==6.0.1
 onnx==1.17.0
 onnx-simplifier==0.4.36
 onnxruntime==1.18.1
-pillow==10.4.0
+pillow==12.1.1
 requests==2.32.4
 seaborn==0.13.2
 torch==2.8.0

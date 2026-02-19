@@ -2369,12 +2369,11 @@ version = "80.9.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "pytorch", "tensorflow", "yolov5-face"]
+groups = ["main", "mtcnn", "pytorch", "tensorflow", "yolov5-face"]
 files = [
     {file = "setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"},
     {file = "setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c"},
 ]
-markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", pytorch = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", yolov5-face = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.extras]
 check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1) ; sys_platform != \"cygwin\"", "ruff (>=0.8.0) ; sys_platform != \"cygwin\""]
@@ -2914,4 +2913,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "67eed6e7e4bafebc6896bda805cdb8a1e1100c88ac35cde0b47fb90c227b5ec2"
+content-hash = "cf00d1bc179d8158258c8c5854c95f97b00795191cee9f75352650567e12dbef"

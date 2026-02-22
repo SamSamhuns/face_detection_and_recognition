@@ -6,6 +6,17 @@ from modules.utils.image import calculate_bbox_iou
 from modules.utils.inference import get_dets_bboxes_confs_lmarks_areas
 
 
+def _match_preds_to_gt(gt_boxes: np.ndarray, pred_boxes: np.ndarray):
+    iou_mat = np.zeros((len(gt_boxes), len(pred_boxes)), dtype=np.float32)
+    for gt_idx, gt_box in enumerate(gt_boxes):
+        for pred_idx, pred_box in enumerate(pred_boxes):
+            iou_mat[gt_idx, pred_idx] = calculate_bbox_iou(gt_box, pred_box)
+
+    gt_idxs, pred_idxs = linear_sum_assignment(-iou_mat)
+    sort_idx = np.argsort(gt_idxs)
+    return iou_mat, gt_idxs[sort_idx], pred_idxs[sort_idx]
+
+
 def test_slow_blank_jpg(mock_mtcnn_slow_model, mock_0_faces_image):
     model = mock_mtcnn_slow_model
     fpath, _ = mock_0_faces_image
@@ -46,9 +57,9 @@ def test_slow_3_faces_jpg(mock_mtcnn_slow_model, mock_3_faces_image):
 
     image = cv2.imread(fpath)
     h, w = image.shape[:2]
-    iw, ih = model.input_size
 
     dets = model(image)
+    iw, ih = model.input_size
     post_dets = get_dets_bboxes_confs_lmarks_areas(
         dets, (w, h), (iw, ih), model.det_thres, model.bbox_area_thres)
 
@@ -56,29 +67,28 @@ def test_slow_3_faces_jpg(mock_mtcnn_slow_model, mock_3_faces_image):
         0.00979424, 0.01138117, 0.04899691
     ])
     gt_boxes = np.array([
-        [285., 210., 341., 327.],
-        [409., 177., 468., 306.],
-        [506., 165., 633., 424.]
+        [285., 235., 341., 303.],
+        [409., 216., 468., 291.],
+        [506., 209., 633., 359.]
     ], dtype=np.float32)
     gt_lmarks = np.array([
-        [302., 253., 329., 258., 316., 277., 300., 292., 326., 299.],
-        [420., 229., 449., 223., 431., 253., 424., 282., 448., 279.],
-        [537., 265., 596., 258., 560., 315., 543., 363., 597., 361.]
+        [302., 260., 329., 263., 316., 274., 300., 283., 326., 287.],
+        [420., 246., 449., 243., 431., 260., 424., 277., 448., 275.],
+        [537., 267., 596., 263., 560., 296., 543., 324., 597., 323.]
     ], dtype=np.float32)
 
     # Check that IoU with GT if reasonable
     pred_boxes = np.array(post_dets.boxes, dtype=np.float32)
     assert len(gt_boxes) == len(pred_boxes)
 
-    ious = [calculate_bbox_iou(a, b) for a, b in zip(gt_boxes, pred_boxes)]
-    iou_mat = np.zeros([len(gt_boxes), len(gt_boxes)])
-    np.fill_diagonal(iou_mat, ious)
-    gt_idxs, pred_idxs = linear_sum_assignment(-iou_mat)
-    is_kept = iou_mat[gt_idxs, pred_idxs] >= 0.8
+    iou_mat, gt_idxs, pred_idxs = _match_preds_to_gt(gt_boxes, pred_boxes)
+    assert gt_idxs.shape[0] == gt_boxes.shape[0]
+    assert np.all(iou_mat[gt_idxs, pred_idxs] >= 0.8)
 
-    assert gt_idxs[is_kept].shape[0] == gt_boxes.shape[0]
-    assert np.allclose(gt_areas, post_dets.bbox_areas, atol=0.001)
-    assert np.allclose(gt_lmarks, post_dets.bbox_lmarks, atol=1)
+    pred_areas = np.array(post_dets.bbox_areas, dtype=np.float32)[pred_idxs]
+    pred_lmarks = np.array(post_dets.bbox_lmarks, dtype=np.float32)[pred_idxs]
+    assert np.allclose(gt_areas, pred_areas, atol=0.001)
+    assert np.allclose(gt_lmarks, pred_lmarks, atol=1)
 
 
 def test_fast_3_faces_jpg(mock_mtcnn_fast_model, mock_3_faces_image):
@@ -87,9 +97,9 @@ def test_fast_3_faces_jpg(mock_mtcnn_fast_model, mock_3_faces_image):
 
     image = cv2.imread(fpath)
     h, w = image.shape[:2]
-    iw, ih = model.input_size
 
     dets = model(image)
+    iw, ih = model.input_size
     post_dets = get_dets_bboxes_confs_lmarks_areas(
         dets, (w, h), (iw, ih), model.det_thres, model.bbox_area_thres)
 
@@ -97,26 +107,25 @@ def test_fast_3_faces_jpg(mock_mtcnn_fast_model, mock_3_faces_image):
         0.01053372, 0.01290631, 0.05193915
     ])
     gt_boxes = np.array([
-        [283., 208., 340., 333.],
-        [407., 169., 469., 311.],
-        [508., 148., 635., 422.]
+        [283., 234., 340., 306.],
+        [407., 212., 469., 294.],
+        [508., 199., 635., 358.]
     ], dtype=np.float32)
     gt_lmarks = np.array([
-        [303., 252., 329., 257., 317., 277., 300., 292., 327., 297.],
-        [421., 230., 449., 224., 431., 253., 425., 281., 449., 277.],
-        [538., 260., 596., 258., 561., 316., 541., 359., 595., 358.]
+        [303., 259., 329., 263., 317., 274., 300., 283., 327., 286.],
+        [421., 247., 449., 243., 431., 260., 425., 277., 449., 274.],
+        [538., 264., 596., 263., 561., 297., 541., 321., 595., 321.]
     ], dtype=np.float32)
 
     # Check that IoU with GT if reasonable
     pred_boxes = np.array(post_dets.boxes, dtype=np.float32)
     assert len(gt_boxes) == len(pred_boxes)
 
-    ious = [calculate_bbox_iou(a, b) for a, b in zip(gt_boxes, pred_boxes)]
-    iou_mat = np.zeros([len(gt_boxes), len(gt_boxes)])
-    np.fill_diagonal(iou_mat, ious)
-    gt_idxs, pred_idxs = linear_sum_assignment(-iou_mat)
-    is_kept = iou_mat[gt_idxs, pred_idxs] >= 0.8
+    iou_mat, gt_idxs, pred_idxs = _match_preds_to_gt(gt_boxes, pred_boxes)
+    assert gt_idxs.shape[0] == gt_boxes.shape[0]
+    assert np.all(iou_mat[gt_idxs, pred_idxs] >= 0.8)
 
-    assert gt_idxs[is_kept].shape[0] == gt_boxes.shape[0]
-    assert np.allclose(gt_areas, post_dets.bbox_areas, atol=0.001)
-    assert np.allclose(gt_lmarks, post_dets.bbox_lmarks, atol=1)
+    pred_areas = np.array(post_dets.bbox_areas, dtype=np.float32)[pred_idxs]
+    pred_lmarks = np.array(post_dets.bbox_lmarks, dtype=np.float32)[pred_idxs]
+    assert np.allclose(gt_areas, pred_areas, atol=0.001)
+    assert np.allclose(gt_lmarks, pred_lmarks, atol=1)

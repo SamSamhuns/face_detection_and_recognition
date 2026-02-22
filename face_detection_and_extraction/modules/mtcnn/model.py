@@ -21,10 +21,18 @@ class MTCNNSlowModel(Model):
     def __call__(
             self,
             cv2_img: np.ndarray) -> np.ndarray:
-        model_out = self.mtcnn.detect_faces(cv2_img)
         # set model input_size to input image size
         self.input_size = cv2_img.shape[:2][::-1]
         iw, ih = self.input_size
+        try:
+            model_out = self.mtcnn.detect_faces(cv2_img)
+        except ValueError as err:
+            # Keras/TF combinations can raise on empty proposal batches.
+            # Treat this as "no detections" for stable behavior.
+            if "empty output" in str(err).lower():
+                model_out = []
+            else:
+                raise
 
         detections = []
         # reorder dets to have [xmin, ymin, xmax, ymax, lmarks, conf] format
@@ -33,10 +41,9 @@ class MTCNNSlowModel(Model):
             xmin, ymin, xmax, ymax = x, y, x + width, y + height
             xmin, ymin, xmax, ymax = xmin / iw, ymin / ih, xmax / iw, ymax / ih
             conf = det['confidence']
-            lmarks = np.asarray([kp for kp in det['keypoints'].values()]).flatten()
             lmarks = np.asarray([(kp0 / iw, kp1 / ih) for kp0, kp1 in det['keypoints'].values()]).flatten()
             detections.append([xmin, ymin, xmax, ymax, *lmarks, conf])
-        detections = np.empty(shape=(0, 15)) if not detections else detections
+        detections = np.empty(shape=(0, 15), dtype=np.float32) if not detections else detections
         return np.asarray(detections)
 
 

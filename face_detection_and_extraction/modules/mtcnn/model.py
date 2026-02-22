@@ -10,6 +10,7 @@ from modules.models.base import Model
 class MTCNNSlowModel(Model):
 
     __slots__ = ["mtcnn"]
+    _LKEY_ORDER = ("left_eye", "right_eye", "nose", "mouth_left", "mouth_right")
 
     def __init__(
             self,
@@ -41,7 +42,13 @@ class MTCNNSlowModel(Model):
             xmin, ymin, xmax, ymax = x, y, x + width, y + height
             xmin, ymin, xmax, ymax = xmin / iw, ymin / ih, xmax / iw, ymax / ih
             conf = det['confidence']
-            lmarks = np.asarray([(kp0 / iw, kp1 / ih) for kp0, kp1 in det['keypoints'].values()]).flatten()
+            kps = det["keypoints"]
+            if all(k in kps for k in self._LKEY_ORDER):
+                kps_iter = (kps[k] for k in self._LKEY_ORDER)
+            else:
+                # Fallback for unexpected key layouts.
+                kps_iter = kps.values()
+            lmarks = np.asarray([(kp0 / iw, kp1 / ih) for kp0, kp1 in kps_iter]).flatten()
             detections.append([xmin, ymin, xmax, ymax, *lmarks, conf])
         detections = np.empty(shape=(0, 15), dtype=np.float32) if not detections else detections
         return np.asarray(detections)

@@ -1,4 +1,4 @@
 -r common.txt
+mtcnn==1.0.0
 setuptools>=65.0.0
-mtcnn==0.1.1
 tensorflow==2.16.1

@@ -88,7 +88,7 @@ optional = true
 [tool.poetry.group.mtcnn]
 optional = true
 [tool.poetry.group.mtcnn.dependencies]
-mtcnn = "0.1.1"
+mtcnn = "1.0.0"
 setuptools = ">=65.0.0"
 # Requires tensorflow group
 # Install with: poetry install --with mtcnn,tensorflow

@@ -89,7 +89,8 @@ def test_slow_3_faces_jpg(mock_mtcnn_slow_model, mock_3_faces_image):
     pred_lmarks = np.array(post_dets.bbox_lmarks, dtype=np.float32)[pred_idxs]
     # Slow MTCNN (keras/tf stack) can shift box sizes slightly across environments.
     assert np.allclose(gt_areas, pred_areas, rtol=0.15, atol=0.001)
-    assert np.allclose(gt_lmarks, pred_lmarks, atol=1)
+    # Landmark points can also vary by ~1-2 px across TF/Keras builds.
+    assert np.allclose(gt_lmarks, pred_lmarks, atol=2)
 
 
 def test_fast_3_faces_jpg(mock_mtcnn_fast_model, mock_3_faces_image):
